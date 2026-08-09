@@ -9,11 +9,11 @@
 ╚══════════════════════════════════════════════════════════════════╝
 
 HOW TO USE:
-  LIVE_DATA = True  — fetch live from data.cityofnewyork.us (default)
-  LIVE_DATA = False — use realistic embedded dataset (offline / CI fallback)
+  LIVE_DATA = True: build from declared official/public sources (default)
+  LIVE_DATA = False: use clearly labelled demo data for interface work only
 
-  The script automatically falls back to embedded data if the API is
-  unreachable, so it always produces a map regardless of network state.
+  Publication builds fail closed when a required source is unavailable.
+  Demo values are never allowed into CI or deployment output.
 
 OUTPUT: nyc_trees_map.html  (interactive Folium choropleth map)
 """
@@ -39,13 +39,13 @@ ALLOW_DEMO_DATA = os.getenv("ALLOW_DEMO_DATA", "false").lower() == "true"
 # ────────────────────────────────────────────────────────────────
 
 print("=" * 65)
-print("  🌳  NYC Green Space Inequity — Street Tree Census Analysis")
+print("  🌳  NYC Green Space Inequity: Street Tree Census Analysis")
 print("=" * 65)
 
 
 # ════════════════════════════════════════════════════════════════
 # 1.  DATA
-#     Embedded dataset is always defined — it acts as both the
+#     Embedded dataset is always defined. It acts as both the
 #     offline fallback AND the income lookup for live mode
 #     (income is not in the tree census datasets).
 # ════════════════════════════════════════════════════════════════
@@ -172,7 +172,7 @@ def _fetch(url, params=None, max_retries=3, timeout=40):
             time.sleep(delay)
 
 def _fetch_acs_income():
-    """Fetch the latest ACS five-year tract income from Census Reporter."""
+    """Load the latest audited ACS five-year tract-income payload."""
     rows = []
     cache_path="data/raw/acs_income.json"
     if os.path.exists(cache_path):
@@ -236,6 +236,8 @@ def _assert_unique_nta(frame, stage):
 
 # ── Live fetch ────────────────────────────────────────────────────────────
 live_ok = False
+tree_2005_unassigned_count = 0
+tree_2005_mapping_coverage_pct = 100.0
 
 if LIVE_DATA:
     try:
@@ -251,7 +253,9 @@ if LIVE_DATA:
         )
         df15 = pd.DataFrame(r.json())
         df15 = df15.rename(columns={"nta": "nta_code"})
+        df15["nta_code"] = df15["nta_code"].astype(str).str.strip()
         df15["trees_2015"] = pd.to_numeric(df15["trees"], errors="coerce").fillna(0).astype(int)
+        df15 = df15[df15["nta_code"] != ""].copy()
         df15 = df15[["nta_code", "trees_2015"]]
         print(f"   ✓ {df15['trees_2015'].sum():,.0f} trees · {len(df15)} NTAs")
 
@@ -265,9 +269,18 @@ if LIVE_DATA:
         )
         df05 = pd.DataFrame(r.json())
         df05 = df05.rename(columns={"nta":"nta_code"})
+        df05["nta_code"] = df05["nta_code"].astype(str).str.strip()
         df05["trees_2005"] = pd.to_numeric(df05["trees"], errors="coerce").fillna(0).astype(int)
+        tree_2005_unassigned_count = int(df05.loc[df05["nta_code"] == "", "trees_2005"].sum())
+        tree_2005_total = int(df05["trees_2005"].sum())
+        df05 = df05[df05["nta_code"] != ""].copy()
+        tree_2005_mapping_coverage_pct = round(
+            100 * int(df05["trees_2005"].sum()) / tree_2005_total, 1
+        ) if tree_2005_total else 0.0
         df05 = df05[["nta_code", "trees_2005"]]
-        print(f"   ✓ {df05['trees_2005'].sum():,.0f} trees · {len(df05)} NTAs")
+        print(f"   ✓ {df05['trees_2005'].sum():,.0f} mapped trees · {len(df05)} NTAs")
+        print(f"   ℹ {tree_2005_unassigned_count:,} records have blank NTA codes; "
+              f"mapping coverage {tree_2005_mapping_coverage_pct:.1f}%")
 
         print("📡 Fetching 2010 census tract boundaries from US Census Bureau…")
         gdf_tracts = gpd.read_file(
@@ -331,7 +344,7 @@ if LIVE_DATA:
         )[["COUNTY","TRACT","nta_code"]]
 
         # Merge tree counts onto real boundary polygons
-        # 2015: join on NTA code (e.g. "BX31") — direct match
+        # 2015: join directly on the NTA code (for example, "BX31")
         merged = gdf_boundaries.merge(df15, on="nta_code", how="left")
         # 2005 also supplies the stable 2010 NTA code.
         merged = merged.merge(df05, on="nta_code", how="left")
@@ -359,7 +372,7 @@ if LIVE_DATA:
         merged = gpd.GeoDataFrame(merged, geometry="geometry", crs="EPSG:4326")
         live_ok = True
 
-        print(f"\n✅ Live data loaded — {len(merged)} NTAs · "
+        print(f"\n✅ Live data loaded: {len(merged)} NTAs · "
               f"{int(merged['trees_2015'].sum()):,} trees (2015) · "
               f"{int(merged['trees_2005'].sum()):,} trees (2005)")
 
@@ -382,7 +395,7 @@ if not live_ok:
     df_data = pd.DataFrame(NTA_RECORDS, columns=_COLS)
     df_data["income_coverage_pct"] = 0.0
     df_data["income_estimated"] = True
-    df_data["income_source"] = "DEMO DATA — not for publication"
+    df_data["income_source"] = "DEMO DATA: not for publication"
     df_data["residential_households"] = np.nan
     df_data["data_mode"] = "demo"
     print(f"   ✓  {df_data['trees_2015'].sum():,} trees  ·  {len(df_data)} NTAs  (embedded)")
@@ -410,160 +423,10 @@ if not live_ok:
     merged = gpd.GeoDataFrame(df_data, geometry="geometry", crs="EPSG:4326")
 
 
-# ════════════════════════════════════════════════════════════════
-# 2b. AIR QUALITY (PM2.5)
-#     Fetched independently — failure here never blocks the map.
-#     Unmatched NTAs receive their borough average.
-#     pm25_estimated=True flags borough-average rows for the frontend.
-# ════════════════════════════════════════════════════════════════
-
-merged["pm25"]           = np.nan
-merged["pm25_estimated"] = True
-
-if LIVE_DATA:
-    try:
-        import requests, re
-        print("\n📡 Fetching air quality (PM2.5) from NYC Open Data…")
-        r = _fetch(
-            "https://data.cityofnewyork.us/resource/c3uy-2p5r.json",
-            params={
-                "$where": ("name='Fine particles (PM 2.5)' AND geo_type_name='UHF42'"
-                           " AND time_period LIKE 'Annual%'"),
-                "$limit": "1000",
-            },
-        )
-        raw = r.json()
-        print(f"   Records returned from API : {len(raw)}")
-        aq_all = pd.DataFrame(raw)
-        print(f"   Field names               : {list(aq_all.columns)}")
-        print(f"   Sample of 5 raw records:")
-        print(aq_all.head(5).to_string())
-
-        aq_all["data_value"] = pd.to_numeric(aq_all["data_value"], errors="coerce")
-        aq_all = aq_all.dropna(subset=["data_value", "geo_place_name"])
-        aq_all["_yr"] = pd.to_datetime(aq_all["start_date"], errors="coerce").dt.year
-
-        # Prefer 2015 to align with tree census; fall back to latest available
-        available_yrs = sorted(aq_all["_yr"].dropna().unique().tolist())
-        target_yr = 2015 if 2015 in available_yrs else int(aq_all["_yr"].max())
-        aq = aq_all[aq_all["_yr"] == target_yr].copy()
-        print(f"\n   Years available: {available_yrs}")
-        print(f"   Using year     : {target_yr}  ({len(aq)} UHF42 records)")
-
-        print(f"\n   PM2.5 stats ({target_yr}):")
-        print(f"     Field with value       : data_value")
-        print(f"     Field with area name   : geo_place_name")
-        print(f"     Min  : {aq['data_value'].min():.2f} μg/m³")
-        print(f"     Max  : {aq['data_value'].max():.2f} μg/m³")
-        print(f"     Mean : {aq['data_value'].mean():.2f} μg/m³")
-        print(f"\n   5 highest PM2.5 UHF42 areas:")
-        print(aq.nlargest(5, "data_value")[["geo_place_name", "data_value"]].to_string())
-        print(f"\n   5 lowest PM2.5 UHF42 areas:")
-        print(aq.nsmallest(5, "data_value")[["geo_place_name", "data_value"]].to_string())
-
-        # Build lowercase name → value lookup
-        uhf_map = {row["geo_place_name"].lower().strip(): float(row["data_value"])
-                   for _, row in aq.iterrows()}
-
-        # UHF42 and NTA are different geographies. Keep the source available for
-        # a future spatial crosswalk, but never guess NTA values from names.
-        def _match_uhf(nta_name):
-            key = nta_name.lower().strip()
-            if key in uhf_map:
-                return uhf_map[key]
-            tokens = set(re.split(r"[\s\-–,()]+", key)) - {"the","and","or","of","etc",""}
-            best_val, best_score = None, 0.0
-            for uhf_name, val in uhf_map.items():
-                uhf_tok = set(re.split(r"[\s\-–,()]+", uhf_name)) - {"the","and","or","of",""}
-                ov = len(tokens & uhf_tok)
-                if ov > 0:
-                    score = ov / max(len(tokens), 1)
-                    if score > best_score:
-                        best_score, best_val = score, val
-            return best_val if best_score >= 0.30 else None
-
-        direct_matched = 0
-        print("\n   PM2.5 retained as unavailable at NTA level (native geography: UHF42)")
-
-        # Fill unmatched NTAs with their borough average
-        boro_avg = (merged.dropna(subset=["pm25"])
-                    .groupby("boro_name")["pm25"].mean().round(2))
-        city_avg = float(merged["pm25"].dropna().mean())
-
-        def _fill_boro(row):
-            if pd.notna(row["pm25"]):
-                return row["pm25"], False
-            avg = boro_avg.get(row["boro_name"], city_avg)
-            return avg, True
-
-        # Borough averages are not substituted for neighborhood values.
-
-        real_count  = 0
-        est_count   = merged["pm25_estimated"].sum()
-        zero_count  = (merged["pm25"].fillna(0) == 0).sum()
-        print(f"   NTAs with pm25 = 0 or null: {zero_count}")
-        print(f"\n   5 highest PM2.5 NTAs:")
-        print(merged.nlargest(5, "pm25")[["nta_name","boro_name","pm25"]].to_string())
-        print(f"\n   5 lowest (cleanest) PM2.5 NTAs:")
-        print(merged.nsmallest(5, "pm25")[["nta_name","boro_name","pm25"]].to_string())
-        print(f"\n   All-NTA PM2.5 stats (real + estimated):")
-        print(f"     Min  : {merged['pm25'].min():.2f} μg/m³")
-        print(f"     Max  : {merged['pm25'].max():.2f} μg/m³")
-        print(f"     Mean : {merged['pm25'].mean():.2f} μg/m³")
-
-        if False and real_count < 30:
-            print(f"\n⚠  WARNING: Only {real_count} NTAs have real PM2.5 data (< 30 threshold)")
-            print("   Retrying with $limit=1000 and no geo_type_name filter…")
-            try:
-                r_retry = _fetch(
-                    "https://data.cityofnewyork.us/resource/c3uy-2p5r.json",
-                    params={
-                        "$where": "name='Fine particles (PM 2.5)' AND time_period LIKE 'Annual%'",
-                        "$limit": "1000",
-                    },
-                )
-                aq_retry = pd.DataFrame(r_retry.json())
-                aq_retry["data_value"] = pd.to_numeric(aq_retry["data_value"], errors="coerce")
-                aq_retry = aq_retry.dropna(subset=["data_value", "geo_place_name"])
-                aq_retry["_yr"] = pd.to_datetime(aq_retry["start_date"], errors="coerce").dt.year
-                aq_yr = aq_retry[aq_retry["_yr"] == target_yr]
-                if len(aq_yr) == 0:
-                    aq_yr = aq_retry[aq_retry["_yr"] == int(aq_retry["_yr"].max())]
-                uhf_retry = {row["geo_place_name"].lower().strip(): float(row["data_value"])
-                             for _, row in aq_yr.iterrows()}
-
-                def _match_retry(nta_name):
-                    key = nta_name.lower().strip()
-                    if key in uhf_retry:
-                        return uhf_retry[key]
-                    tokens = set(re.split(r"[\s\-–,()]+", key)) - {"the","and","or","of","etc",""}
-                    best_val, best_score = None, 0.0
-                    for uhf_name, val in uhf_retry.items():
-                        uhf_tok = set(re.split(r"[\s\-–,()]+", uhf_name)) - {"the","and","or","of",""}
-                        ov = len(tokens & uhf_tok)
-                        if ov > 0:
-                            score = ov / max(len(tokens), 1)
-                            if score > best_score:
-                                best_score, best_val = score, val
-                    return best_val if best_score >= 0.30 else None
-
-                retry_matches = merged["nta_name"].apply(_match_retry)
-                was_est = merged["pm25_estimated"].copy()
-                new_hits = was_est & retry_matches.notna()
-                merged.loc[new_hits, "pm25"] = retry_matches[new_hits].round(2)
-                merged.loc[new_hits, "pm25_estimated"] = False
-                real_count = (~merged["pm25_estimated"]).sum()
-                print(f"   After retry: {real_count} NTAs with real PM2.5 data")
-            except Exception as exc_retry:
-                print(f"   Retry failed: {exc_retry}")
-
-        print(f"\n   AIR QUALITY COVERAGE: {real_count} of {len(merged)} NTAs have "
-              f"real PM2.5 data, {est_count} using borough averages")
-
-    except Exception as exc:
-        import traceback
-        print(f"\n⚠  PM2.5 data unavailable: {exc}")
-        traceback.print_exc()
+# PM2.5 is catalogued but not transformed to NTA geography. It remains null
+# until a documented spatial or population-weighted crosswalk is implemented.
+merged["pm25"] = np.nan
+merged["pm25_estimated"] = False
 
 
 # ════════════════════════════════════════════════════════════════
@@ -582,6 +445,8 @@ merged["pct_change"]   = ((merged["tree_change"] / merged["trees_2005"].replace(
 merged["data_mode"] = merged.get("data_mode", "official")
 merged["generated_at"] = datetime.now(timezone.utc).isoformat()
 merged["tree_source_year"] = 2015
+merged["tree_2005_unassigned_count"] = tree_2005_unassigned_count
+merged["tree_2005_mapping_coverage_pct"] = tree_2005_mapping_coverage_pct
 if "income_source_year" not in merged:
     merged["income_source_year"] = np.nan
 
@@ -606,11 +471,6 @@ merged["area_context"] = np.select(
     default="Residential/community",
 )
 
-# Normalise 0–1
-def norm01(s):
-    lo, hi = s.min(), s.max()
-    return (s - lo) / (hi - lo + 1e-9)
-
 eligible = merged["investment_eligible"]
 merged["inc_norm"] = np.nan
 merged["den_norm"] = np.nan
@@ -618,10 +478,6 @@ merged.loc[eligible, "inc_norm"] = merged.loc[eligible, "median_income"].rank(pc
 merged.loc[eligible, "den_norm"] = merged.loc[eligible, "density_2015"].rank(pct=True)
 merged["heat_proxy"]  = (1 - merged["den_norm"] * 0.6 - merged["inc_norm"] * 0.4).round(3)
 merged["heat_proxy_method"] = "Project proxy: 60% street-tree density percentile + 40% income percentile"
-
-# PM2.5: fill NaN with median for normalisation (keeps every NTA in the index)
-_pm25_fill       = merged["pm25"].fillna(merged["pm25"].median() if merged["pm25"].notna().any() else 8.0)
-merged["pm25_norm"] = norm01(_pm25_fill)
 
 # Project screening score. PM2.5 is excluded until a valid spatial crosswalk exists.
 merged["underserved"] = (
@@ -654,6 +510,7 @@ export_cols = [
     "heat_proxy", "heat_proxy_method", "underserved", "screening_score_method",
     "equity_label", "pm25", "pm25_estimated", "data_mode", "generated_at",
     "tree_source_year", "income_source_year", "geometry",
+    "tree_2005_unassigned_count", "tree_2005_mapping_coverage_pct",
 ]
 merged[export_cols].to_file(OUTPUT_DATA, driver="GeoJSON")
 
@@ -673,7 +530,7 @@ bsumm = (merged.groupby("boro_name")
 print(bsumm.to_string())
 
 print("\n" + "─" * 65)
-print("  TOP 10 MOST UNDERSERVED NTAs")
+print("  TOP 10 PROJECT SCREENING SCORES")
 print("─" * 65)
 top10 = (merged[merged["investment_eligible"]].nlargest(10, "underserved")
          [["nta_name","boro_name","density_2015","median_income","underserved","equity_label"]]
@@ -688,18 +545,6 @@ losers = (merged.nsmallest(8,"tree_change")
           [["nta_name","boro_name","trees_2005","trees_2015","tree_change","pct_change"]]
           .reset_index(drop=True))
 print(losers.to_string())
-
-if merged["pm25"].notna().any():
-    print("\n" + "─" * 65)
-    print("  TOP 5 MOST POLLUTED NTAs (PM2.5 μg/m³)")
-    print("─" * 65)
-    pm25_top = (merged.dropna(subset=["pm25"])
-                .nlargest(5, "pm25")
-                [["nta_name", "boro_name", "pm25"]]
-                .reset_index(drop=True))
-    pm25_top.index += 1
-    print(pm25_top.to_string())
-
 
 # ════════════════════════════════════════════════════════════════
 # 5.  FOLIUM MAP
@@ -720,7 +565,7 @@ def _ensure_breaks(breaks):
             b[i] = b[i-1] + 1e-6
     return b
 
-# TREE DENSITY — 5-step green (quantile breakpoints)
+# TREE DENSITY: 5-step green (quantile breakpoints)
 _density_colors = ["#edf8e9", "#bae4b3", "#74c476", "#31a354", "#006d2c"]
 _density_q = _ensure_breaks(
     [float(merged["density_2015"].quantile(q)) for q in [0, 0.2, 0.4, 0.6, 0.8, 1.0]]
@@ -731,7 +576,7 @@ DENSITY_CM = StepColormap(
     caption="Tree Density (trees / km²)",
 )
 
-# MEDIAN INCOME — 5-step purple (20th/40th/60th/80th percentile breaks)
+# MEDIAN INCOME: 5-step purple (20th/40th/60th/80th percentile breaks)
 _income_colors = ["#f2f0f7", "#cbc9e2", "#9e9ac8", "#756bb1", "#54278f"]
 _income_q = _ensure_breaks(
     [float(merged["median_income"].quantile(q)) for q in [0, 0.2, 0.4, 0.6, 0.8, 1.0]]
@@ -742,7 +587,7 @@ INCOME_CM = StepColormap(
     caption="Median Household Income ($)",
 )
 
-# UNDERSERVED INDEX — 5-step yellow-to-dark-red (quantile breaks)
+# PROJECT SCREENING SCORE: 5-step yellow-to-dark-red (quantile breaks)
 _underserved_colors = ["#ffffcc", "#fed976", "#fd8d3c", "#e31a1c", "#800026"]
 _underserved_q = _ensure_breaks(
     [float(merged["underserved"].quantile(q)) for q in [0, 0.2, 0.4, 0.6, 0.8, 1.0]]
@@ -750,10 +595,10 @@ _underserved_q = _ensure_breaks(
 UNDERSERVED_CM = StepColormap(
     colors=_underserved_colors, index=_underserved_q,
     vmin=_underserved_q[0], vmax=_underserved_q[-1],
-    caption="Underserved Index (0=well-served → 1=critical)",
+    caption="Project Screening Score (lower to higher)",
 )
 
-# TREE CHANGE 2005→2015 — 5-step diverging, symmetric around 0
+# TREE CHANGE 2005→2015: 5-step diverging, symmetric around 0
 _change_colors = ["#d73027", "#f46d43", "#ffffbf", "#74add1", "#313695"]
 _change_abs_max = max(
     abs(float(merged["tree_change"].quantile(0.05))),
@@ -767,7 +612,7 @@ CHANGE_CM = StepColormap(
     caption="Tree Count Change (2005 → 2015)",
 )
 
-# URBAN HEAT VULNERABILITY — 5-step fire scale (quantile breaks)
+# TREE-AND-INCOME PROXY: 5-step fire scale (quantile breaks)
 _heat_colors = ["#ffffb2", "#fecc5c", "#fd8d3c", "#f03b20", "#bd0026"]
 _heat_q = _ensure_breaks(
     [float(merged["heat_proxy"].quantile(q)) for q in [0, 0.2, 0.4, 0.6, 0.8, 1.0]]
@@ -775,16 +620,7 @@ _heat_q = _ensure_breaks(
 HEAT_CM = StepColormap(
     colors=_heat_colors, index=_heat_q,
     vmin=_heat_q[0], vmax=_heat_q[-1],
-    caption="Urban Heat Vulnerability (estimated)",
-)
-
-# PM2.5 AIR QUALITY — 7-step orange-to-dark-red, fixed range 5–15 μg/m³
-_pm25_colors = ["#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84", "#fc8d59", "#e34a33", "#b30000"]
-_pm25_breaks = [float(x) for x in np.linspace(5.0, 15.0, 8)]
-PM25_CM = StepColormap(
-    colors=_pm25_colors, index=_pm25_breaks,
-    vmin=5.0, vmax=15.0,
-    caption="PM2.5 (μg/m³) — Annual Mean",
+    caption="Tree + Income Screening Proxy",
 )
 
 # ── Print breakpoints ────────────────────────────────────────────────────
@@ -792,12 +628,10 @@ print(f"\n  Tree Density breaks: "
       f"{_density_q[1]:.0f} | {_density_q[2]:.0f} | {_density_q[3]:.0f} | {_density_q[4]:.0f} trees/km²")
 print(f"  Income breaks: "
       f"${_income_q[1]:,.0f} | ${_income_q[2]:,.0f} | ${_income_q[3]:,.0f} | ${_income_q[4]:,.0f}")
-print(f"  Underserved breaks: "
+print(f"  Screening score breaks: "
       f"{_underserved_q[1]:.3f} | {_underserved_q[2]:.3f} | {_underserved_q[3]:.3f} | {_underserved_q[4]:.3f}")
-print(f"  Heat breaks: "
+print(f"  Tree + income proxy breaks: "
       f"{_heat_q[1]:.3f} | {_heat_q[2]:.3f} | {_heat_q[3]:.3f} | {_heat_q[4]:.3f}")
-print(f"  PM2.5 breaks: "
-      f"{_pm25_breaks[1]:.1f} | {_pm25_breaks[2]:.1f} | {_pm25_breaks[3]:.1f} | {_pm25_breaks[4]:.1f} μg/m³")
 
 # ── Map object ───────────────────────────────────────────────────
 m = folium.Map(
@@ -806,10 +640,12 @@ m = folium.Map(
     tiles=None,
     control_scale=True,
 )
+min_lon, min_lat, max_lon, max_lat = gdf_wgs.total_bounds
+m.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]], padding=(12, 12))
 
 folium.TileLayer("CartoDB dark_matter",  name="Dark (default)", show=True).add_to(m)
-folium.TileLayer("CartoDB positron",     name="Light").add_to(m)
-folium.TileLayer("OpenStreetMap",        name="Street Map").add_to(m)
+folium.TileLayer("CartoDB positron",     name="Light", show=False).add_to(m)
+folium.TileLayer("OpenStreetMap",        name="Street Map", show=False).add_to(m)
 
 # ── GeoJson layer factory ────────────────────────────────────────
 EQUITY_COLORS = {
@@ -825,9 +661,13 @@ def make_layer(value_col, colormap, layer_name, show=False):
     fg = folium.FeatureGroup(name=layer_name, show=show)
 
     def style(feat):
-        val = feat["properties"].get(value_col) or 0
+        props = feat["properties"]
+        val = props.get(value_col)
+        if val is None or (value_col in {"underserved", "heat_proxy"} and not props.get("investment_eligible")):
+            return {"fillColor": "#39433d", "color": "#7b8580",
+                    "weight": 0.5, "fillOpacity": 0.45}
         try:    color = colormap(float(val))
-        except: color = "#444"
+        except (TypeError, ValueError): color = "#39433d"
         return {"fillColor": color, "color": "#ffffff",
                 "weight": 0.5, "fillOpacity": 0.85}
 
@@ -842,14 +682,25 @@ def make_layer(value_col, colormap, layer_name, show=False):
     return fg
 
 # ── Add all layers ───────────────────────────────────────────────
-make_layer("density_2015", DENSITY_CM,    "🌳 Tree Density (2015)",           show=True ).add_to(m)
-make_layer("median_income",INCOME_CM,     "💵 Median Household Income",        show=False).add_to(m)
-make_layer("underserved",  UNDERSERVED_CM,"Project Screening Score",           show=False).add_to(m)
-make_layer("tree_change",  CHANGE_CM,     "📈 Tree Change 2005→2015",          show=False).add_to(m)
-make_layer("heat_proxy",   HEAT_CM,       "Tree + Income Heat Proxy",          show=False).add_to(m)
+tree_density_layer = make_layer("density_2015", DENSITY_CM, "Tree Density (2015)", show=True)
+income_layer = make_layer("median_income", INCOME_CM, "Median Household Income", show=False)
+screening_layer = make_layer("underserved", UNDERSERVED_CM, "Project Screening Score", show=False)
+tree_change_layer = make_layer("tree_change", CHANGE_CM, "Tree Change 2005→2015", show=False)
+proxy_layer = make_layer("heat_proxy", HEAT_CM, "Tree + Income Screening Proxy", show=False)
 
-# ── Underserved markers (critical NTAs) ──────────────────────────
-critical_fg = folium.FeatureGroup(name="Higher-priority screening NTAs (top 15)", show=True)
+for atlas_layer in (tree_density_layer, income_layer, screening_layer, tree_change_layer, proxy_layer):
+    atlas_layer.add_to(m)
+
+_atlas_layer_vars = {
+    "Tree Density (2015)": tree_density_layer.get_name(),
+    "Median Household Income": income_layer.get_name(),
+    "Project Screening Score": screening_layer.get_name(),
+    "Tree Change 2005→2015": tree_change_layer.get_name(),
+    "Tree + Income Screening Proxy": proxy_layer.get_name(),
+}
+
+# ── Higher-score screening markers ───────────────────────────────
+priority_fg = folium.FeatureGroup(name="Higher-score areas (top 15)", show=False)
 top15 = merged[merged["investment_eligible"]].nlargest(15, "underserved")
 for _, row in top15.iterrows():
     try:
@@ -865,15 +716,15 @@ for _, row in top15.iterrows():
         fill=True,
         fill_color="#ff6600",
         fill_opacity=0.85,
-        tooltip=f"⚠ {row['nta_name']} ({row['boro_name']})\n"
-                f"Underserved: {row['underserved']:.2f}  |  "
+        tooltip=f"{row['nta_name']} ({row['boro_name']})\n"
+                f"Screening score: {row['underserved']:.2f}  |  "
                 f"Density: {row['density_2015']:.0f} trees/km²  |  "
                 f"Income: ${int(row['median_income']):,}",
-    ).add_to(critical_fg)
-critical_fg.add_to(m)
+    ).add_to(priority_fg)
+priority_fg.add_to(m)
 
 # ── Tree density heatmap (centroid-based) ────────────────────────
-heat_fg = folium.FeatureGroup(name="🔥 Density Heatmap", show=False)
+heat_fg = folium.FeatureGroup(name="Tree Density Heatmap", show=False)
 heat_pts = []
 for _, row in merged.iterrows():
     try:
@@ -889,7 +740,7 @@ HeatMap(heat_pts, min_opacity=0.3, radius=25, blur=20,
 heat_fg.add_to(m)
 
 # ── Layer control ────────────────────────────────────────────────
-LayerControl(collapsed=False, position="topright").add_to(m)
+LayerControl(collapsed=True, position="topright").add_to(m)
 
 # ── Custom legend panel + universal tooltip (injected HTML) ─────
 _TOOLTIP_JS = """
@@ -900,25 +751,26 @@ _TOOLTIP_JS = """
 
   function buildTooltipHTML(p){
     var name=window.__activeLayerName||'';
+    var eligible=p.investment_eligible===true;
     var html='<div style="font-family:DM Sans,sans-serif;min-width:155px">'
       +'<b style="font-size:13px;color:#e8f0e8;display:block;margin-bottom:5px">'
       +(p.nta_name||'')+'</b>';
     if(name.indexOf('Tree Density')>=0){
       var dens=Math.round(parseFloat(p.density_2015)||0).toLocaleString();
-      html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">🌳 '+dens+' trees/km²</div>'
+      html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">'+dens+' street trees/km²</div>'
            +'<span style="background:'+(EQ[p.equity_label]||'#888')
            +';color:#fff;padding:2px 8px;border-radius:3px;font-size:10px">'
            +(p.equity_label||'')+'</span>';
-    }else if(name.indexOf('Income')>=0){
-      var inc=parseInt(p.median_income)||0;
-      var sc=inc>=63000?'#2fa05e':'#d94f00';
-      html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">💵 $'
-           +inc.toLocaleString()+' median income</div>'
-           +'<span style="color:'+sc+';font-size:10px">'
-           +(inc>=63000?'↑ above NYC avg':'↓ below NYC avg')+'</span>';
-    }else if(name.indexOf('Underserved')>=0){
-      var score=(parseFloat(p.underserved)||0).toFixed(2);
-      html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">🔴 Underserved Score: '+score+'</div>'
+    }else if(name.indexOf('Median Household Income')>=0){
+      var inc=p.median_income==null?null:parseInt(p.median_income);
+      html+=inc==null
+        ? '<div style="color:#b0cbb0;font-size:11px">Income estimate unavailable</div>'
+        : '<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">$'+inc.toLocaleString()+' estimated median income</div>'
+          +'<span style="color:#7f9582;font-size:10px">ACS ending '+(p.income_source_year||'year unavailable')+'</span>';
+    }else if(name.indexOf('Screening Score')>=0){
+      if(!eligible||p.underserved==null) return html+'<div style="color:#9aa59f;font-size:11px">Context only. Not ranked.</div></div>';
+      var score=parseFloat(p.underserved).toFixed(3);
+      html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">Project screening score: '+score+'</div>'
            +'<span style="background:'+(EQ[p.equity_label]||'#888')
            +';color:#fff;padding:2px 8px;border-radius:3px;font-size:10px">'
            +(p.equity_label||'')+'</span>';
@@ -926,25 +778,15 @@ _TOOLTIP_JS = """
       var chg=parseInt(p.tree_change)||0;
       var cc=chg>=0?'#2fa05e':'#d94f00';
       html+='<div style="color:'+cc+';font-size:11px">'
-           +(chg>=0?'📈 +':'📉 ')
+           +(chg>=0?'+':'-')
            +Math.abs(chg).toLocaleString()+' trees since 2005</div>';
-    }else if(name.indexOf('Heat')>=0){
-      var heat=parseFloat(p.heat_proxy)||0;
-      var hl=heat>=0.75?'Critical':heat>=0.55?'High':heat>=0.35?'Moderate':'Low';
+    }else if(name.indexOf('Proxy')>=0){
+      if(!eligible||p.heat_proxy==null) return html+'<div style="color:#9aa59f;font-size:11px">Context only. Not ranked.</div></div>';
+      var heat=parseFloat(p.heat_proxy);
+      var hl=heat>=0.75?'Higher proxy':heat>=0.55?'Elevated proxy':heat>=0.35?'Middle proxy':'Lower proxy';
       var hc=heat>=0.75?'#c0392b':heat>=0.55?'#d94f00':heat>=0.35?'#f5b800':'#2fa05e';
-      html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">🌡 Heat Risk: '+heat.toFixed(3)+'</div>'
+      html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">Tree + income proxy: '+heat.toFixed(3)+'</div>'
            +'<span style="color:'+hc+';font-size:10px">'+hl+'</span>';
-    }else if(name.indexOf('Air')>=0||name.indexOf('PM')>=0){
-      var pm=parseFloat(p.pm25)||0;
-      if(pm>0){
-        var pml='Modeled estimate';
-        var pmc=pm<8?'#2fa05e':pm<10?'#f5b800':'#c0392b';
-        html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">💨 PM2.5: '
-             +pm.toFixed(1)+' μg/m³</div>'
-             +'<span style="color:'+pmc+';font-size:10px">'+pml+'</span>';
-      }else{
-        html+='<div style="color:#b0cbb0;font-size:11px">💨 PM2.5: N/A</div>';
-      }
     }else{
       html+='<span style="background:'+(EQ[p.equity_label]||'#888')
            +';color:#fff;padding:2px 8px;border-radius:3px;font-size:10px">'
@@ -954,7 +796,7 @@ _TOOLTIP_JS = """
   }
 
   // Start with the default-visible layer name
-  window.__activeLayerName = '🌳 Tree Density (2015)';
+  window.__activeLayerName = 'Tree Density (2015)';
   var tip = document.getElementById('custom-tooltip');
 
   // Attach mouseover / mousemove / mouseout / click to every GeoJSON feature
@@ -1023,7 +865,7 @@ def _lr(bg, lbl):
             f"<span>{lbl}</span></div>")
 
 _leg_density = (
-    "<h4>&#x1F333; Tree Density (trees/km&#xB2;)</h4>"
+    "<h4>Tree Density (trees/km&#xB2;)</h4>"
     + _lr("#edf8e9", f"&lt; {_density_q[1]:.0f}")
     + _lr("#bae4b3", f"{_density_q[1]:.0f} &#x2013; {_density_q[2]:.0f}")
     + _lr("#74c476", f"{_density_q[2]:.0f} &#x2013; {_density_q[3]:.0f}")
@@ -1031,7 +873,7 @@ _leg_density = (
     + _lr("#006d2c", f"&gt; {_density_q[4]:.0f} trees/km&#xB2;")
 )
 _leg_income = (
-    "<h4>&#x1F4B5; Median Household Income</h4>"
+    "<h4>Median Household Income</h4>"
     + _lr("#f2f0f7", f"&lt; ${_income_q[1]:,.0f}")
     + _lr("#cbc9e2", f"${_income_q[1]:,.0f} &#x2013; ${_income_q[2]:,.0f}")
     + _lr("#9e9ac8", f"${_income_q[2]:,.0f} &#x2013; ${_income_q[3]:,.0f}")
@@ -1039,15 +881,15 @@ _leg_income = (
     + _lr("#54278f", f"&gt; ${_income_q[4]:,.0f}")
 )
 _leg_underserved = (
-    "<h4>&#x1F534; Underserved Index</h4>"
-    + _lr("#ffffcc", f"&lt; {_underserved_q[1]:.2f} well-served")
+    "<h4>Project Screening Score</h4>"
+    + _lr("#ffffcc", f"&lt; {_underserved_q[1]:.2f} lower")
     + _lr("#fed976", f"{_underserved_q[1]:.2f} &#x2013; {_underserved_q[2]:.2f}")
     + _lr("#fd8d3c", f"{_underserved_q[2]:.2f} &#x2013; {_underserved_q[3]:.2f}")
     + _lr("#e31a1c", f"{_underserved_q[3]:.2f} &#x2013; {_underserved_q[4]:.2f}")
-    + _lr("#800026", f"&gt; {_underserved_q[4]:.2f} critical")
+    + _lr("#800026", f"&gt; {_underserved_q[4]:.2f} higher")
 )
 _leg_change = (
-    "<h4>&#x1F4C8; Tree Change 2005&#x2192;2015</h4>"
+    "<h4>Tree Change 2005&#x2192;2015</h4>"
     + _lr("#d73027", f"{_change_breaks[0]:,.0f} &#x2013; {_change_breaks[1]:,.0f} big loss")
     + _lr("#f46d43", f"{_change_breaks[1]:,.0f} &#x2013; {_change_breaks[2]:,.0f}")
     + _lr("#ffffbf", f"{_change_breaks[2]:,.0f} &#x2013; {_change_breaks[3]:,.0f} no change")
@@ -1055,34 +897,23 @@ _leg_change = (
     + _lr("#313695", f"{_change_breaks[4]:,.0f} &#x2013; {_change_breaks[5]:,.0f} big gain")
 )
 _leg_heat = (
-    "<h4>&#x1F321; Heat Vulnerability</h4>"
-    + _lr("#ffffb2", f"&lt; {_heat_q[1]:.2f} low")
+    "<h4>Tree + Income Screening Proxy</h4>"
+    + _lr("#ffffb2", f"&lt; {_heat_q[1]:.2f} lower")
     + _lr("#fecc5c", f"{_heat_q[1]:.2f} &#x2013; {_heat_q[2]:.2f}")
     + _lr("#fd8d3c", f"{_heat_q[2]:.2f} &#x2013; {_heat_q[3]:.2f}")
     + _lr("#f03b20", f"{_heat_q[3]:.2f} &#x2013; {_heat_q[4]:.2f}")
-    + _lr("#bd0026", f"&gt; {_heat_q[4]:.2f} critical")
-)
-_leg_pm25 = (
-    "<h4>&#x1F4A8; PM2.5 (&#x3BC;g/m&#xB3;)</h4>"
-    + _lr("#fff7ec", f"&lt; {_pm25_breaks[1]:.1f} clean")
-    + _lr("#fee8c8", f"{_pm25_breaks[1]:.1f} &#x2013; {_pm25_breaks[2]:.1f}")
-    + _lr("#fdd49e", f"{_pm25_breaks[2]:.1f} &#x2013; {_pm25_breaks[3]:.1f}")
-    + _lr("#fdbb84", f"{_pm25_breaks[3]:.1f} &#x2013; {_pm25_breaks[4]:.1f}")
-    + _lr("#fc8d59", f"{_pm25_breaks[4]:.1f} &#x2013; {_pm25_breaks[5]:.1f}")
-    + _lr("#e34a33", f"{_pm25_breaks[5]:.1f} &#x2013; {_pm25_breaks[6]:.1f}")
-    + _lr("#b30000", f"&gt; {_pm25_breaks[6]:.1f} hazardous")
+    + _lr("#bd0026", f"&gt; {_heat_q[4]:.2f} higher")
 )
 
 _legend_js = (
     "function updateLegend(n){"
-    "['leg-density','leg-income','leg-underserved','leg-change','leg-heat','leg-pm25']"
+    "['leg-density','leg-income','leg-underserved','leg-change','leg-heat']"
     ".forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='none';});"
     "var s='leg-density';"
-    "if(n.indexOf('Income')>=0)s='leg-income';"
-    "else if(n.indexOf('Underserved')>=0)s='leg-underserved';"
+    "if(n.indexOf('Median Household Income')>=0)s='leg-income';"
+    "else if(n.indexOf('Screening Score')>=0)s='leg-underserved';"
     "else if(n.indexOf('Change')>=0)s='leg-change';"
-    "else if(n.indexOf('Heat')>=0)s='leg-heat';"
-    "else if(n.indexOf('Air')>=0||n.indexOf('PM')>=0)s='leg-pm25';"
+    "else if(n.indexOf('Proxy')>=0)s='leg-heat';"
     "var el=document.getElementById(s);if(el)el.style.display='block';}"
     "window.__legendUpdate=updateLegend;"
     "window.addEventListener('message',function(msg){"
@@ -1094,6 +925,18 @@ _legend_js = (
 title_html = (
     "<style>"
     "@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@500&family=DM+Sans:wght@400;600&display=swap');"
+    ".leaflet-bar,.leaflet-control-layers{border:1px solid rgba(78,203,128,.28)!important;"
+    "border-radius:8px!important;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.38)!important}"
+    ".leaflet-bar a{background:#0d1117!important;color:#dce9df!important;border-bottom-color:#1a2620!important}"
+    ".leaflet-bar a:hover{background:#15201a!important;color:#4ecb80!important}"
+    ".leaflet-control-layers{background:#0d1117!important;color:#cce0cc!important;font-family:'DM Sans',sans-serif}"
+    ".leaflet-control-layers-toggle{background-color:#0d1117!important;filter:invert(1) opacity(.72)}"
+    ".leaflet-control-layers-expanded{padding:10px 12px!important}"
+    ".leaflet-control-layers-separator{border-top-color:#26332b!important}"
+    ".leaflet-control-scale-line{background:rgba(13,17,23,.88)!important;color:#cce0cc!important;"
+    "border-color:#4d6b52!important;text-shadow:none!important}"
+    ".leaflet-control-attribution{background:rgba(13,17,23,.82)!important;color:#6f8574!important}"
+    ".leaflet-control-attribution a{color:#79b98e!important}"
     ".eql{position:fixed;bottom:28px;left:54px;z-index:9999;background:rgba(8,12,8,0.88);"
     "border:1px solid #222;padding:8px 10px;border-radius:4px;box-shadow:0 2px 12px rgba(0,0,0,0.4);"
     "min-width:170px}"
@@ -1101,6 +944,7 @@ title_html = (
     ".eql .er{display:flex;align-items:center;gap:6px;margin:2px 0}"
     ".eql .dt{width:9px;height:9px;border-radius:2px;flex-shrink:0}"
     ".eql span{font-size:10px;color:#b0c8b0;font-family:'DM Sans',sans-serif}"
+    "@media(max-width:600px){.eql{left:12px;bottom:28px;transform:scale(.82);transform-origin:bottom left}}"
     "</style>"
     "<div id='custom-tooltip' style='"
     "position:fixed;background:#0d1117;color:#cce0cc;padding:8px 12px;"
@@ -1114,8 +958,8 @@ title_html = (
     "<div id='leg-underserved' style='display:none'>" + _leg_underserved + "</div>"
     "<div id='leg-change' style='display:none'>" + _leg_change + "</div>"
     "<div id='leg-heat' style='display:none'>" + _leg_heat + "</div>"
-    "<div id='leg-pm25' style='display:none'>" + _leg_pm25 + "</div>"
     "</div>"
+    "<script>window.__atlasLayerVars=" + json.dumps(_atlas_layer_vars) + ";</script>"
     "<script>" + _legend_js + "</script>"
     "<script>" + _TOOLTIP_JS + "</script>"
 )
@@ -1123,6 +967,12 @@ m.get_root().html.add_child(Element(title_html))
 
 # ── Save ─────────────────────────────────────────────────────────
 m.save(OUTPUT_HTML)
+# Folium templates include trailing spaces. Normalize the generated artifact so
+# pull-request diffs and whitespace checks stay clean and reproducible.
+with open(OUTPUT_HTML, encoding="utf-8") as handle:
+    normalized_html = "\n".join(line.rstrip() for line in handle.read().splitlines()) + "\n"
+with open(OUTPUT_HTML, "w", encoding="utf-8") as handle:
+    handle.write(normalized_html)
 print(f"\n✅  Map saved → {OUTPUT_HTML}")
 print(f"    Open in any browser for the interactive map.")
 if not live_ok:

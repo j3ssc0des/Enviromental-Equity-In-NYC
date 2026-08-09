@@ -15,6 +15,8 @@ def get_json(url):
     return json.loads(result.stdout)
 
 def audit(source):
+    observed_reference_year=None
+    reference_period=None
     if source["kind"] == "socrata":
         url = f"https://data.cityofnewyork.us/resource/{source['id']}.json?$limit=1"
         payload=get_json(url)
@@ -25,13 +27,20 @@ def audit(source):
     if source["kind"]=="census_reporter":
         ACS_CACHE.parent.mkdir(parents=True, exist_ok=True)
         ACS_CACHE.write_text(json.dumps(payload)+"\n")
+        reference_period=str(payload["release"]["years"])
+        observed_reference_year=int(reference_period.split("-")[-1])
         sample=next(iter(payload["data"].values()))
         fields=set(sample["B19013"]["estimate"])|set(sample["B11001"]["estimate"])
     else:
         fields=set(payload[0] if payload else {})
     missing = sorted(set(source["required_fields"]) - fields)
+    max_lag=source.get("max_reference_lag_years")
+    stale=bool(max_lag is not None and observed_reference_year is not None and
+               datetime.now(timezone.utc).year-observed_reference_year>max_lag)
     return {"id":source["id"], "name":source["name"], "status":source["status"],
-            "reachable":True, "missing_required_fields":missing, "ok":not missing, "checked_url":url}
+            "reachable":True, "missing_required_fields":missing, "stale":stale,
+            "reference_period":reference_period, "observed_reference_year":observed_reference_year,
+            "ok":not missing and not stale, "checked_url":url}
 
 def main():
     results=[]

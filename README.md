@@ -2,7 +2,7 @@
 
 [View the deployed site](https://j3ssc0des.github.io/Enviromental-Equity-In-NYC)
 
-An expanding, source-transparent atlas of New York City environmental conditions. The first module compares the 2005 and 2015 NYC Street Tree Censuses with current ACS five-year income context at 2010 Neighborhood Tabulation Area geography. Source years are displayed separately.
+An expanding, source-transparent atlas of New York City environmental conditions. The first module compares the 2005 and 2015 NYC Street Tree Censuses with 2020–2024 ACS five-year income context at 2010 Neighborhood Tabulation Area geography. Source years are displayed separately and the ACS release is refreshed by the build pipeline.
 
 ## Current module
 
@@ -12,6 +12,8 @@ An expanding, source-transparent atlas of New York City environmental conditions
 - A clearly labeled project screening score
 - A clearly labeled tree-and-income heat proxy
 - A compact map-first interface with expandable neighborhood details
+- A persistent interpretation sidebar with source-bound neighborhood narratives
+- A validated GeoJSON snapshot used by the map, rankings, findings, and localhost preview
 
 Street trees are not total canopy. The proxy is not measured temperature or NYC's official Heat Vulnerability Index. Read [methodology](docs/methodology.md) before interpreting results.
 
@@ -20,6 +22,8 @@ Airports, parks, cemeteries, islands, correctional facilities, and other areas w
 ## Roadmap
 
 The [data catalog](docs/data-catalog.md) tracks official heat, flooding, canopy, air, pollution, water, health, and community-vulnerability sources. A dataset is promoted only after its native geography, uncertainty, transformation, missingness behavior, and update cadence are documented and tested.
+
+The interpretation sidebar is ready for a server-side AI explanation layer. Any model must receive only validated atlas records and source metadata, cite the values and years it discusses, distinguish observed measures from project proxies, and fall back to the current calculation-backed narrative when the service is unavailable. API keys must never be placed in the GitHub Pages client.
 
 ## Reliability
 
@@ -39,11 +43,14 @@ pip install -r requirements.txt
 python .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
 python nyc_trees_analysis.py
 python scripts/validate_build.py
+python3 -m http.server 8000
 ```
+
+Then open `http://127.0.0.1:8000/`. Rankings read the validated GeoJSON directly and fail closed if it is unavailable, so the UI cannot silently fall back to old embedded defaults.
 
 ## Primary sources
 
 - [NYC Street Tree Census 2015](https://data.cityofnewyork.us/d/uvpi-gqnh)
 - [NYC Street Tree Census 2005](https://data.cityofnewyork.us/d/29bw-z7pj)
 - [2010 tract-to-NTA crosswalk](https://data.cityofnewyork.us/d/8ius-dhrr)
-- [US Census ACS API](https://api.census.gov/data/2015/acs/acs5.html)
+- [2020–2024 ACS five-year API](https://api.census.gov/data/2024/acs/acs5.html)

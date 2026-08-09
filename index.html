@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NYC Green Space — Data Dashboard</title>
+  <title>NYC Environmental Atlas | Neighborhood Data</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -30,8 +30,8 @@
       --sans:         "DM Sans", system-ui, sans-serif;
     }
 
-    html { scroll-behavior: smooth; }
-    body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+    html { scroll-behavior: smooth; max-width: 100%; overflow-x: hidden; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; max-width: 100%; overflow-x: hidden; }
 
     /* ── STICKY NAV ────────────────────────────────────────── */
     nav {
@@ -77,33 +77,31 @@
       content: ''; width: 5px; height: 5px; border-radius: 50%;
       background: var(--green); animation: pulse 2.2s ease-in-out infinite;
     }
-    .catalog { max-width:1000px; margin:0 auto 1.25rem; padding:0 1.5rem; }
-    .catalog-grid { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin; }
-    .domain-card { background:var(--surface); border:1px solid var(--border); border-radius:99px; padding:7px 11px; min-height:0; white-space:nowrap; display:flex; gap:7px; align-items:center; }
-    .domain-card.active { border-color:var(--green-border); background:linear-gradient(145deg,rgba(47,160,94,.12),var(--surface)); }
-    .domain-title { color:#fff; font-size:.7rem; font-weight:600; margin:0; }
-    .domain-status { color:var(--muted); font-family:var(--mono); font-size:.52rem; letter-spacing:.08em; text-transform:uppercase; }
-    .domain-card.active .domain-status { color:var(--green-bright); }
     @keyframes pulse {
       0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(47,160,94,0.5); }
       50%      { opacity:0.6; box-shadow:0 0 0 5px rgba(47,160,94,0); }
     }
 
     /* ── HERO ──────────────────────────────────────────────── */
-    .hero { padding: 2.4rem 1.5rem 1.35rem; max-width: 760px; margin: 0 auto; text-align: center; }
+    .hero {
+      width: 100%; padding: 0.7rem 20px 0.65rem; margin: 0 auto;
+      display: flex; align-items: baseline; justify-content: space-between; gap: 24px;
+      overflow: hidden;
+    }
     .eyebrow {
       display: inline-block; font-family: var(--mono); font-size: 0.7rem;
       letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--green); background: rgba(47,160,94,0.1);
       border: 1px solid rgba(47,160,94,0.25); border-radius: 99px;
-      padding: 0.25rem 0.9rem; margin-bottom: 1.1rem;
+      padding: 0.22rem 0.75rem; margin-bottom: 0.65rem;
     }
     .hero h1 {
-      font-size: clamp(1.8rem,5vw,2.8rem); font-weight: 700;
-      line-height: 1.15; letter-spacing: -0.03em; color: #fff; margin-bottom: 1rem;
+      font-size: clamp(1.05rem,1.55vw,1.3rem); font-weight: 700;
+      line-height: 1.15; letter-spacing: -0.02em; color: #fff;
+      max-width: 100%; overflow-wrap: anywhere;
     }
     .hero h1 em { font-style: normal; color: var(--green); }
-    .hero p { font-size: 1rem; line-height: 1.7; color: var(--muted); max-width: 580px; margin: 0 auto; }
+    .hero p { font-size: 0.78rem; line-height: 1.45; color: var(--muted); max-width: min(560px, 100%); text-align: right; overflow-wrap: anywhere; }
 
     /* ── STATS BAR ─────────────────────────────────────────── */
     .stats-bar {
@@ -148,21 +146,30 @@
 
     /* ── DASHBOARD (GEO MAP) ───────────────────────────────── */
     .dashboard {
-      display: flex; height: calc(100vh - 50px);
-      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      display: flex; height: calc(100dvh - 50px - 60px - 38px); min-height: 560px;
+      margin: 0 12px; overflow: hidden;
+      border: 1px solid rgba(47,160,94,0.22); border-radius: 12px;
+      box-shadow: 0 18px 55px rgba(0,0,0,0.28);
     }
-    .map-col { flex: 0 0 65%; height: 100%; position: relative; border-right: 1px solid var(--border); overflow: hidden; }
+    .map-col { flex: 0 0 68%; height: 100%; position: relative; border-right: 1px solid var(--border); overflow: hidden; }
     .map-col iframe { width: 100%; height: 100%; border: none; display: block; }
 
     .panel-col {
-      flex: 0 0 35%; background: var(--panel-bg);
+      flex: 0 0 32%; background: var(--panel-bg);
       display: flex; flex-direction: column; overflow: hidden; min-width: 0;
     }
-    .panel-header { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .panel-header { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .panel-eyebrow {
       font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.2em;
-      color: var(--muted); text-transform: uppercase; margin-bottom: 9px;
+      color: var(--muted); text-transform: uppercase; margin-bottom: 8px;
     }
+    .nta-search {
+      width: 100%; height: 34px; margin-bottom: 8px; padding: 0 10px;
+      background: #090d11; color: var(--text); border: 1px solid var(--border); border-radius: 6px;
+      font: 0.72rem var(--sans); outline: none; transition: border-color .15s, box-shadow .15s;
+    }
+    .nta-search::placeholder { color: #48604e; }
+    .nta-search:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(47,160,94,.1); }
     .metric-tabs { display: flex; gap: 3px; }
     .mtab {
       font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em;
@@ -181,7 +188,10 @@
     .panel-body::-webkit-scrollbar-thumb { background: var(--border); }
 
     .placeholder { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
-    .ph-dashes { font-family: var(--mono); font-size: 2.8rem; color: var(--border); letter-spacing: 0.4em; }
+    .ph-marker { width: 42px; height: 42px; border: 1px solid var(--green-border); border-radius: 50%; position: relative; background: var(--green-lo); }
+    .ph-marker::before { content: ''; position: absolute; inset: 10px; border: 1px solid rgba(78,203,128,.45); border-radius: 50%; }
+    .ph-marker::after { content: ''; position: absolute; width: 6px; height: 6px; left: 17px; top: 17px; background: var(--green-bright); border-radius: 50%; box-shadow: 0 0 12px rgba(78,203,128,.65); }
+    .ph-title { color: #fff; font-size: 0.92rem; font-weight: 600; }
     .ph-hint { font-size: 0.78rem; color: var(--muted); text-align: center; max-width: 190px; line-height: 1.55; }
 
     .nta-data { display: none; }
@@ -192,15 +202,13 @@
     .nta-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
     .nta-boro { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.1em; color: var(--muted); }
     .eq-badge { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.12em; padding: 2px 7px; border-radius: 3px; text-transform: uppercase; }
+    .share-btn {
+      margin-left: auto; padding: 3px 7px; color: var(--muted); background: transparent;
+      border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+      font: 0.5rem var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    }
+    .share-btn:hover,.share-btn:focus-visible { color: var(--green); border-color: var(--green); outline: none; }
 
-
-    .score-section { margin-bottom: 13px; }
-    .score-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
-    .score-title { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; }
-    .score-num { font-family: var(--mono); font-size: 0.8rem; color: var(--green); }
-    .score-track { height: 5px; background: var(--surface); border-radius: 3px; overflow: hidden; margin-bottom: 3px; }
-    .score-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease, background 0.4s ease; }
-    .score-ends { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.5rem; color: var(--muted); letter-spacing: 0.06em; }
 
     .panel-divider { height: 1px; background: var(--border); margin: 13px 0; }
     .nta-summary {
@@ -208,6 +216,8 @@
       border-left: 2px solid var(--green); border-radius: 0 5px 5px 0;
       padding: 10px 12px; font-size: 0.8rem; line-height: 1.62; color: var(--muted);
     }
+    .analysis-heading { display: flex; align-items: center; margin-bottom: 7px; }
+    .analysis-title { font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--green-bright); }
 
     /* ── PER-TAB PANEL SECTIONS ──────────────────────────── */
     .tab-panel { display: none; }
@@ -263,27 +273,21 @@
 
     /* Heat panel */
     .heat-hero-num { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--orange); line-height: 1; margin-bottom: 3px; }
-    .heat-explain { font-size: 0.8rem; line-height: 1.6; color: var(--muted); margin-bottom: 12px; }
     .air-source { font-family: var(--mono); font-size: 0.48rem; letter-spacing: 0.04em; color: var(--muted); margin-top: 12px; line-height: 1.6; }
     .boro-compare { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 9px 11px; }
     .boro-compare-label { font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
     .boro-compare-val { font-family: var(--mono); font-size: 0.82rem; color: var(--text); }
 
-    /* ── TICKER ────────────────────────────────────────────── */
-    .ticker {
-      height: 36px; background: #080b0e; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; overflow: hidden;
+    /* ── DATA STATUS ───────────────────────────────────────── */
+    .data-status {
+      min-height: 38px; background: transparent; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+      gap: 6px 18px; padding: 8px 16px;
+      font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.06em; color: var(--muted);
     }
-    .ticker-tag {
-      flex-shrink: 0; font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.16em;
-      color: var(--green); background: var(--green-lo); border-right: 1px solid var(--green-border);
-      padding: 0 14px; height: 100%; display: flex; align-items: center;
-    }
-    .ticker-track { flex: 1; overflow: hidden; height: 100%; display: flex; align-items: center; }
-    .ticker-inner { display: flex; white-space: nowrap; animation: ticker-scroll 30s linear infinite; }
-    .ticker-item { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.06em; color: var(--muted); padding: 0 48px; }
-    .ticker-item b { color: var(--green); font-weight: 400; }
-    @keyframes ticker-scroll { 0% { transform:translateX(0); } 100% { transform:translateX(-50%); } }
+    .data-status strong { color: var(--green); font-weight: 700; }
+    .data-status a { color: var(--text); text-decoration: none; }
+    .data-status a:hover { color: var(--green); }
 
     /* ── BOROUGH STATS VIEW ────────────────────────────────── */
     .tabview-inner {
@@ -377,43 +381,32 @@
     .footer-credit { font-size: 0.75rem; color: var(--muted); }
     .footer-note { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); letter-spacing: 0.04em; padding-top: 0.25rem; border-top: 1px solid var(--border); }
 
-    /* ── COMPARISON TABLE ────────────────────────────────── */
-    .ct-grid-hdr { display: grid; grid-template-columns: 38% 31% 31%; gap: 3px; margin-bottom: 6px; }
-    .ct-grid-row { display: grid; grid-template-columns: 38% 31% 31%; gap: 3px; margin-bottom: 3px; align-items: center; }
-    .ct-metric-lbl { font-family: var(--mono); font-size: 0.48rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 2px 0; line-height: 1.3; }
-    .ct-hdr-cell { padding: 5px 4px; border-radius: 3px; font-family: var(--mono); font-size: 0.5rem; text-align: center; }
-    .ct-hdr-cell.a-hdr { background: rgba(47,160,94,0.08); border: 1px solid rgba(47,160,94,0.2); }
-    .ct-hdr-cell.b-hdr { background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); }
-    .ct-hdr-cell.bench-hdr { background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.25); }
-    .ct-hdr-name { font-size: 0.68rem; font-weight: 600; color: #e8f0e8; line-height: 1.2; display: block; margin-bottom: 2px; }
-    .ct-hdr-boro { font-family: var(--mono); font-size: 0.5rem; color: var(--muted); display: block; }
-    .ct-hdr-badge { display: inline-block; font-family: var(--mono); font-size: 0.46rem; padding: 1px 5px; border-radius: 2px; margin-top: 3px; }
-    .ct-cell { padding: 5px 4px; border-radius: 3px; font-family: var(--mono); font-size: 0.68rem; text-align: center; }
-    .ct-cell.good     { background: rgba(47,160,94,0.12);  color: #4ecb80; }
-    .ct-cell.warn     { background: rgba(245,184,0,0.10);  color: #f5b800; }
-    .ct-cell.bad      { background: rgba(217,79,0,0.12);   color: #d94f00; }
-    .ct-cell.bench-tgt{ background: rgba(212,175,55,0.08); color: #c4a33a; font-size: 0.64rem; }
-    .ct-cell.b-good   { background: rgba(47,160,94,0.08);  color: #4ecb80; }
-    .ct-cell.b-warn   { background: rgba(245,184,0,0.08);  color: #f5b800; }
-    .ct-cell.b-bad    { background: rgba(217,79,0,0.08);   color: #d94f00; }
-    .ct-cell.win      { font-weight: 700; }
-    .ct-score { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.58rem; color: var(--muted); margin: 8px 0 4px; padding: 0 2px; }
-    .ct-score b { color: var(--green); }
-    .ct-gap { background: rgba(47,160,94,0.05); border: 1px solid rgba(47,160,94,0.12); border-left: 2px solid var(--green); border-radius: 0 4px 4px 0; padding: 9px 11px; font-size: 0.76rem; line-height: 1.62; color: var(--muted); margin: 6px 0 8px; }
-    .ct-gap b { color: var(--green); }
+    /* ── SCORE DETAILS ───────────────────────────────────── */
+    .score-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px; }
+    .score-part { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 10px; }
+    .score-part strong { display: block; color: #fff; font-family: var(--mono); font-size: 0.8rem; margin-bottom: 3px; }
+    .score-part span { color: var(--muted); font-size: 0.7rem; line-height: 1.4; }
+    .score-note { background: rgba(47,160,94,0.05); border: 1px solid rgba(47,160,94,0.14); border-left: 2px solid var(--green); border-radius: 0 5px 5px 0; padding: 10px 11px; font-size: 0.76rem; line-height: 1.55; color: var(--muted); }
     /* ── RESPONSIVE ────────────────────────────────────────── */
     @media (max-width: 900px) {
       .charts-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 820px) {
-      .dashboard { flex-direction: column; height: auto; }
+      nav { height: auto; min-height: 50px; flex-wrap: wrap; padding: 8px 12px; }
+      .nav-tabs { order: 3; width: 100%; max-width: 100%; min-width: 0; overflow: hidden; padding-top: 2px; }
+      .nav-tab { flex: 1 1 0; width: 0; min-width: 0; }
+      .hero { align-items: center; }
+      .dashboard { flex-direction: column; height: auto; min-height: 0; margin: 0; border-left: 0; border-right: 0; border-radius: 0; box-shadow: none; }
       .map-col { flex: none; height: 52vh; border-right: none; border-bottom: 1px solid var(--border); }
       .panel-col { flex: none; height: 420px; }
-      .nav-tabs { display: none; }
       .footer-row { flex-direction: column; align-items: flex-start; }
     }
     @media (max-width: 600px) {
-      .hero { padding: 2.5rem 1.25rem 1.5rem; }
+      .hero { padding: 0.8rem 1rem 0.75rem; flex-direction: column; gap: 4px; align-items: flex-start; }
+      .hero h1 { font-size: 1.05rem; }
+      .hero p { font-size: 0.75rem; text-align: left; }
+      .nav-right { display: none; }
+      .nav-tab { min-width: 0; padding: 6px 4px; font-size: 0.5rem; }
       .stat { margin: 0; }
     }
   </style>
@@ -426,60 +419,48 @@
       <img class="brand-mark" src="assets/nyc-environment-mark.svg" alt="" />
       <span class="brand-copy">NYC ENVIRONMENTAL <small>ATLAS</small></span>
     </a>
-    <div class="nav-tabs">
-      <button class="nav-tab active" data-tab="geomap">MAP</button>
-      <button class="nav-tab" data-tab="borough">BOROUGH VIEW</button>
-      <button class="nav-tab" data-tab="heat">HEAT PROXY</button>
+    <div class="nav-tabs" role="tablist" aria-label="Atlas views">
+      <button class="nav-tab active" data-tab="geomap" role="tab" aria-selected="true">MAP</button>
+      <button class="nav-tab" data-tab="borough" role="tab" aria-selected="false">BOROUGHS</button>
+      <button class="nav-tab" data-tab="heat" role="tab" aria-selected="false">SCREENING</button>
     </div>
     <div class="nav-right">
-      <span class="live-badge">VERIFIED BUILD</span>
-      <span>2015 baseline</span>
+      <span class="live-badge">AUDITED DATA</span>
+      <span id="nav-vintage">Source years shown</span>
     </div>
   </nav>
 
   <!-- HERO ──────────────────────────────────────────────────── -->
   <section class="hero">
-    <div class="eyebrow">NYC environmental data &nbsp;·&nbsp; neighborhood context</div>
-    <h1>See the environment shaping<br><em>every NYC neighborhood.</em></h1>
-    <p>
-      Explore sourced neighborhood data, starting with NYC street trees and income context.
-    </p>
-  </section>
-
-  <section class="catalog" aria-labelledby="catalog-title">
-    <div class="section-label" id="catalog-title">Data layers</div>
-    <div class="catalog-grid">
-      <div class="domain-card active"><div class="domain-title">Green space</div><div class="domain-status">Available</div></div>
-      <div class="domain-card"><div class="domain-title">Heat</div><div class="domain-status">Next</div></div>
-      <div class="domain-card"><div class="domain-title">Flooding</div><div class="domain-status">Next</div></div>
-      <div class="domain-card"><div class="domain-title">Air</div><div class="domain-status">Planned</div></div>
-      <div class="domain-card"><div class="domain-title">Pollution</div><div class="domain-status">Planned</div></div>
-      <div class="domain-card"><div class="domain-title">Health</div><div class="domain-status">Planned</div></div>
-    </div>
+    <h1>NYC's neighborhood environment, <em>mapped.</em></h1>
+    <p>Explore street trees and income context, one neighborhood at a time.</p>
   </section>
 
   <!-- ① GEO MAP TAB ────────────────────────────────────────── -->
   <div id="tab-geomap" class="tab-view active">
     <div class="dashboard">
       <div class="map-col">
-        <iframe id="map-frame" src="nyc_trees_map.html" title="NYC Green Space Inequity — Interactive Map" allowfullscreen></iframe>
+        <iframe id="map-frame" src="nyc_trees_map.html" title="NYC Environmental Atlas interactive map" allowfullscreen></iframe>
       </div>
 
       <div class="panel-col">
         <div class="panel-header">
-          <div class="panel-eyebrow">Select Neighborhood to Analyse</div>
-          <div class="metric-tabs">
-            <button class="mtab active" data-tab="trees">TREES</button>
-            <button class="mtab" data-tab="income">INCOME</button>
-            <button class="mtab" data-tab="heat">HEAT</button>
-            <button class="mtab" data-tab="equity">EQUITY</button>
+          <div class="panel-eyebrow">Neighborhood inspector</div>
+          <input class="nta-search" id="nta-search" list="nta-options" type="search" autocomplete="off" placeholder="Search 195 NYC areas" aria-label="Search neighborhoods" />
+          <datalist id="nta-options"></datalist>
+          <div class="metric-tabs" role="tablist" aria-label="Neighborhood metrics">
+            <button class="mtab active" data-tab="trees" role="tab" aria-selected="true">TREES</button>
+            <button class="mtab" data-tab="income" role="tab" aria-selected="false">INCOME</button>
+            <button class="mtab" data-tab="equity" role="tab" aria-selected="false">SCORE</button>
+            <button class="mtab" data-tab="heat" role="tab" aria-selected="false">PROXY</button>
           </div>
         </div>
         <div class="panel-body" id="panel-body">
           <!-- Placeholder (no neighborhood selected) -->
           <div class="placeholder" id="placeholder">
-            <div class="ph-dashes">- -</div>
-            <div class="ph-hint">Click any neighborhood on the map to load its data</div>
+            <div class="ph-marker" aria-hidden="true"></div>
+            <div class="ph-title">Pick a neighborhood</div>
+            <div class="ph-hint" id="ph-count">Click the map to load a clear, sourced snapshot</div>
           </div>
 
           <!-- Loaded state: shared overview + tab detail panels -->
@@ -488,20 +469,13 @@
             <div class="nta-meta">
               <span class="nta-boro" id="nta-boro"></span>
               <span class="eq-badge" id="eq-badge"></span>
+              <button class="share-btn" id="share-neighborhood" type="button">Copy link</button>
             </div>
 
-            <!-- Underserved score bar (always visible) -->
-            <div class="score-section">
-              <div class="score-header">
-                <span class="score-title">Project screening score</span>
-                <span class="score-num" id="tp-score-num"></span>
-              </div>
-              <div class="score-track"><div class="score-fill" id="tp-score-fill"></div></div>
-              <div class="score-ends"><span>LOWER PRIORITY</span><span>HIGHER PRIORITY</span></div>
+            <!-- One concise source-bound interpretation for the active metric -->
+            <div class="analysis-heading">
+              <span class="analysis-title">Atlas analysis</span>
             </div>
-
-            <!-- Plain English summary (always visible) -->
-            <div class="panel-divider"></div>
             <div class="nta-summary" id="tp-equity-summary"></div>
             <div class="panel-divider"></div>
 
@@ -509,7 +483,7 @@
             <div class="tab-panel active" id="tp-trees">
               <div class="hero-stat">
                 <div class="hero-num" id="tp-trees-2015"></div>
-                <div class="hero-label">Street trees in 2015</div>
+                <div class="hero-label">Street trees from the 2015 census</div>
               </div>
               <div class="sec-stats">
                 <div class="sec-box">
@@ -527,7 +501,7 @@
               </div>
               <div class="cmp-section">
                 <div class="cmp-label-row">
-                  <span class="cmp-label">Density vs NYC average (874/km²)</span>
+                  <span class="cmp-label">Density vs ranked-area average (<span id="tp-density-reference">loading</span>)</span>
                 </div>
                 <div class="cmp-track">
                   <div class="cmp-fill" id="tp-dens-fill"></div>
@@ -544,12 +518,12 @@
             <div class="tab-panel" id="tp-income">
               <div class="hero-stat">
                 <div class="hero-num" id="tp-income-val"></div>
-                <div class="hero-label">Median household income</div>
+                <div class="hero-label" id="tp-income-source-label">Median household income estimate</div>
               </div>
               <div id="tp-income-badge" class="avg-compare"></div>
               <div class="cmp-section">
                 <div class="cmp-label-row">
-                  <span class="cmp-label">Income rank among 195 neighborhoods</span>
+                  <span class="cmp-label">Income rank among eligible areas</span>
                   <span class="cmp-note" id="tp-rank-note"></span>
                 </div>
                 <div class="cmp-track">
@@ -557,85 +531,26 @@
                 </div>
                 <div class="cmp-ends"><span>Lowest</span><span>Highest</span></div>
               </div>
-              <div class="panel-divider"></div>
-              <div class="nta-summary" id="tp-income-note"></div>
-            </div>
-
-            <!-- AIR QUALITY TAB PANEL -->
-            <div class="tab-panel" id="tp-air">
-              <div class="hero-stat">
-                <div class="hero-num" id="tp-air-val" style="color:var(--green)"></div>
-                <div class="hero-label">PM2.5 Fine Particles (μg/m³)</div>
-              </div>
-              <div id="tp-air-badge" class="avg-compare" style="margin-bottom:8px"></div>
-              <div class="nta-summary" id="tp-air-estimated" style="display:none;margin-bottom:10px"></div>
-              <div class="sec-stats">
-                <div class="sec-box">
-                  <div class="sec-label">PM2.5 Level</div>
-                  <div class="sec-val neutral" id="tp-air-level"></div>
-                </div>
-                <div class="sec-box">
-                  <div class="sec-label">NYC Average</div>
-                  <div class="sec-val neutral">8.5 μg/m³</div>
-                </div>
-                <div class="sec-box">
-                  <div class="sec-label">Reference comparison</div>
-                  <div class="sec-val" id="tp-air-vs-safe"></div>
-                </div>
-              </div>
-              <div class="cmp-section">
-                <div class="cmp-label-row">
-                  <span class="cmp-label">PM2.5 reference comparison</span>
-                </div>
-                <div class="cmp-track" style="height:10px;overflow:hidden">
-                  <div class="cmp-fill" id="tp-air-fill"></div>
-                  <div class="cmp-marker" id="tp-air-safe-marker">
-                    <div class="cmp-marker-label">Safe 8.0</div>
-                  </div>
-                </div>
-                <div class="cmp-ends"><span>0</span><span id="tp-air-max"></span></div>
-                <div class="cmp-note" id="tp-air-note"></div>
-              </div>
-              <div class="cmp-section">
-                <div class="cmp-label" style="margin-bottom:6px">Tree Cover Impact</div>
-                <div class="sec-stats">
-                  <div class="sec-box">
-                    <div class="sec-label">Tree Density</div>
-                    <div class="sec-val neutral" id="tp-air-tree-dens"></div>
-                  </div>
-                  <div class="sec-box">
-                    <div class="sec-label">PM2.5 Level</div>
-                    <div class="sec-val neutral" id="tp-air-tree-pm25"></div>
-                  </div>
-                </div>
-                <div class="nta-summary" id="tp-air-insight" style="margin-top:8px"></div>
-              </div>
-              <div class="air-source">PM2.5 data: NYC DOHMH Environment &amp; Health Data Portal · 2015 annual averages</div>
             </div>
 
             <!-- EQUITY TAB PANEL -->
             <div class="tab-panel" id="tp-equity">
               <div class="hero-stat">
                 <div class="hero-num" id="tp-score-big"></div>
-                <div class="hero-label">Project screening score · trees 55% + income 45%</div>
+                <div class="hero-label">Project screening score: trees 55% + income 45%</div>
               </div>
-              <div id="tp-equity-bench"></div>
+              <div id="tp-score-details"></div>
             </div>
 
             <!-- HEAT TAB PANEL -->
             <div class="tab-panel" id="tp-heat">
               <div class="hero-stat">
                 <div class="heat-hero-num" id="tp-heat-val"></div>
-                <div class="hero-label">Tree-and-income heat proxy · not observed temperature</div>
+                <div class="hero-label">Tree-and-income screening proxy, not observed heat</div>
               </div>
               <div id="tp-heat-badge" class="avg-compare" style="margin-bottom:12px"></div>
-              <div class="heat-explain" id="tp-heat-explain"></div>
-              <div class="boro-compare" id="tp-pm25-wrap" style="margin-top:10px;margin-bottom:4px">
-                <div class="boro-compare-label">Air Quality (PM2.5)</div>
-                <div id="tp-pm25-val" class="boro-compare-val"></div>
-              </div>
               <div class="boro-compare">
-                <div class="boro-compare-label">Borough average heat score</div>
+                <div class="boro-compare-label">Borough average proxy</div>
                 <div class="boro-compare-val" id="tp-boro-heat"></div>
               </div>
             </div>
@@ -647,18 +562,10 @@
       </div>
     </div>
 
-    <div class="ticker">
-      <div class="ticker-tag">DATA</div>
-      <div class="ticker-track">
-        <div class="ticker-inner">
-          <span class="ticker-item"><b>MOST UNDERSERVED</b> Hunts Point, Bronx &nbsp;·&nbsp; Score 0.89</span>
-          <span class="ticker-item"><b>HIGHEST DENSITY</b> Tottenville, Staten Island &nbsp;·&nbsp; 1,295 trees / km²</span>
-          <span class="ticker-item"><b>TOTAL TREES 2015</b> 666,134 across 195 neighborhoods</span>
-          <span class="ticker-item"><b>MOST UNDERSERVED</b> Hunts Point, Bronx &nbsp;·&nbsp; Score 0.89</span>
-          <span class="ticker-item"><b>HIGHEST DENSITY</b> Tottenville, Staten Island &nbsp;·&nbsp; 1,295 trees / km²</span>
-          <span class="ticker-item"><b>TOTAL TREES 2015</b> 666,134 across 195 neighborhoods</span>
-        </div>
-      </div>
+    <div class="data-status" id="data-status" role="status" aria-live="polite">
+      <span><strong>LOADING</strong> validated neighborhood snapshot</span>
+      <span>Residential rankings only</span>
+      <a href="docs/methodology.md">How this works</a>
     </div>
   </div><!-- /#tab-geomap -->
 
@@ -666,8 +573,8 @@
   <div id="tab-borough" class="tab-view">
     <div class="tabview-inner">
       <div class="tv-header">
-        <div class="tv-title">Borough Statistics — Tree Equity Comparison</div>
-        <div class="tv-sub">Average tree density, median income, and underserved neighborhood count across all 5 boroughs</div>
+        <div class="tv-title">Borough comparison</div>
+        <div class="tv-sub">Residential/community areas only. Values are descriptive project comparisons, not funding decisions.</div>
       </div>
       <div id="borough-loading" class="loading-msg">Loading data from map...</div>
       <div id="borough-content" style="display:none">
@@ -680,7 +587,7 @@
                 <th>Total Trees</th>
                 <th>Avg Density (trees/km²)</th>
                 <th>Avg Median Income</th>
-                <th>Underserved NTAs</th>
+                <th>Higher-score areas</th>
               </tr>
             </thead>
             <tbody id="borough-tbody"></tbody>
@@ -694,8 +601,8 @@
   <div id="tab-heat" class="tab-view">
     <div class="tabview-inner">
       <div class="tv-header">
-        <div class="tv-title">Tree-and-Income Heat Proxy — Top 20 Neighborhoods</div>
-        <div class="tv-sub">A project proxy, not NYC's official Heat Vulnerability Index or measured temperature</div>
+        <div class="tv-title">Tree-and-income screening proxy: top 20</div>
+        <div class="tv-sub">Lower street-tree density plus lower income. This is not observed temperature or NYC's official Heat Vulnerability Index.</div>
       </div>
       <div id="heat-loading" class="loading-msg">Loading data from map...</div>
       <div id="heat-content" style="display:none">
@@ -709,20 +616,20 @@
     <div class="section-label">Key findings</div>
     <div class="findings-grid">
       <div class="finding">
-        <div class="finding-tag">Inequality</div>
-        <p>Street-tree density varies substantially across NTAs. Use the map values—not a hard-coded narrative—to compare neighborhoods in trees per square kilometer.</p>
+        <div class="finding-tag">Shade gap</div>
+        <p id="finding-spread">NYC has one skyline, but its sidewalk shade changes dramatically from neighborhood to neighborhood.</p>
       </div>
       <div class="finding">
-        <div class="finding-tag">Income gap</div>
-        <p>Income and tree density can be compared as an association. The map does not infer causes or reconstruct public-investment history.</p>
+        <div class="finding-tag">Priority signal</div>
+        <p id="finding-priority">The screening score helps spot where lower tree density and lower income overlap.</p>
       </div>
       <div class="finding">
-        <div class="finding-tag">Progress, but uneven</div>
-        <p>The 2005–2015 layer provides a historical comparison. Boundary and census-method limitations are documented alongside the data.</p>
+        <div class="finding-tag">Tree comeback</div>
+        <p id="finding-change">Some neighborhoods added a surprising number of street trees between the two censuses.</p>
       </div>
       <div class="finding">
-        <div class="finding-tag">Heat and health</div>
-        <p>The current heat view is explicitly a tree-and-income proxy. Official NYC HVI will be added as a separate, sourced dataset.</p>
+        <div class="finding-tag">Reality check</div>
+        <p id="finding-guardrail">Airports, parks, and cemeteries can stay on the map, but they sit out community rankings. Fair is fair.</p>
       </div>
     </div>
   </div>
@@ -733,13 +640,13 @@
       <div class="footer-row">
         <div class="data-sources">
           <span>Data:</span>
-          <a href="https://data.cityofnewyork.us/resource/uvpi-gqnh" target="_blank" rel="noopener">NYC Street Tree Census 2015</a>
+          <a href="https://data.cityofnewyork.us/d/uvpi-gqnh" target="_blank" rel="noopener">NYC Street Tree Census 2015</a>
           <span>·</span>
-          <a href="https://data.cityofnewyork.us/resource/29bw-z7pj" target="_blank" rel="noopener">NYC Street Tree Census 2005</a>
+          <a href="https://data.cityofnewyork.us/d/29bw-z7pj" target="_blank" rel="noopener">NYC Street Tree Census 2005</a>
           <span>·</span>
           <a href="https://data.cityofnewyork.us/City-Government/2010-Census-Tract-to-Neighborhood-Tabulation-Area-/8ius-dhrr" target="_blank" rel="noopener">NYC Neighborhood Tabulation Areas</a>
           <span>·</span>
-          <span>NYC Dept. of Parks &amp; Recreation</span>
+          <a href="https://api.census.gov/data/2024/acs/acs5.html" target="_blank" rel="noopener">ACS 2020–2024</a>
         </div>
         <a class="footer-credit" href="https://github.com/j3ssc0des/Enviromental-Equity-In-NYC" target="_blank" rel="noopener" style="color:var(--green);text-decoration:none;">View on GitHub</a>
       </div>
@@ -747,7 +654,7 @@
         <div class="footer-credit">Built with Python, GeoPandas &amp; Folium. Deployed via GitHub Pages.</div>
       </div>
       <div class="footer-note">
-        Data snapshot rebuilt from declared public sources. See <a href="docs/methodology.md">methodology</a> and <a href="docs/data-catalog.md">data catalog</a>. Scheduled checks detect upstream schema changes; source year is shown per metric.
+        The published snapshot is rebuilt from declared public sources. See <a href="docs/methodology.md">methodology</a> and <a href="docs/data-catalog.md">data catalog</a>. Automated checks detect schema drift, duplicates, low coverage, and non-residential ranking leaks.
       </div>
     </div>
   </footer>
@@ -757,13 +664,36 @@
 let ntaData      = [];
 let boroughBuilt = false;
 let heatBuilt    = false;
+let currentNeighborhood = null;
+let currentMetric = 'trees';
+const NON_RESIDENTIAL_NAME = /airport|park-cemetery|cemetery|park$|riker|fort totten|governors island|ellis island|liberty island/i;
 
-/* ── HEALTHY BENCHMARK TARGETS ─────────────────────────────── */
-const BENCHMARK = {
-  nta_name:'NYC Healthy Benchmark', _isBenchmark:true,
-  density_2015:1000, median_income:63000, underserved:0.30,
-  heat_proxy:0.40, pm25:null, tree_change:1, equity_label:'Lower Priority', boro_name:'',
-};
+function isInvestmentEligible(d) {
+  const name = String((d && d.nta_name) || '');
+  return !!d && d.investment_eligible === true && !NON_RESIDENTIAL_NAME.test(name);
+}
+
+function eligibleNeighborhoods() {
+  return ntaData.filter(isInvestmentEligible);
+}
+
+function median(values) {
+  const sorted = values.filter(Number.isFinite).sort((a,b) => a-b);
+  if (!sorted.length) return 0;
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function currentReferences() {
+  const rows = eligibleNeighborhoods();
+  const totalTrees = rows.reduce((sum,d) => sum + (Number(d.trees_2015) || 0), 0);
+  const totalArea = rows.reduce((sum,d) => sum + (Number(d.area_km2) || 0), 0);
+  return {
+    rows,
+    density: totalArea > 0 ? totalTrees / totalArea : 0,
+    income: median(rows.map(d => Number(d.median_income))),
+  };
+}
 
 /* ── EQUITY CONFIG ─────────────────────────────────────────── */
 const EQ = {
@@ -793,57 +723,65 @@ function heatColor(v) {
 
 function heatLabel(v) {
   if (v >= 0.75) return { text:'HIGHER PROXY', bg:'rgba(109,0,0,0.2)', border:'#c0392b', text2:'#c0392b' };
-  if (v >= 0.55) return { text:'HIGH',     bg:'rgba(217,79,0,0.15)', border:'#d94f00', text2:'#d94f00' };
-  if (v >= 0.35) return { text:'MODERATE', bg:'rgba(245,184,0,0.12)',border:'#f5b800', text2:'#f5b800' };
-  return               { text:'LOW',       bg:'rgba(47,160,94,0.12)',border:'#2fa05e', text2:'#2fa05e' };
+  if (v >= 0.55) return { text:'ELEVATED PROXY', bg:'rgba(217,79,0,0.15)', border:'#d94f00', text2:'#d94f00' };
+  if (v >= 0.35) return { text:'MIDDLE PROXY', bg:'rgba(245,184,0,0.12)',border:'#f5b800', text2:'#f5b800' };
+  return               { text:'LOWER PROXY', bg:'rgba(47,160,94,0.12)',border:'#2fa05e', text2:'#2fa05e' };
 }
 
-function makeSummary(p) {
+function makeSummary(p, metric) {
   const name    = p.nta_name || 'This neighborhood';
   const density = Math.round(parseFloat(p.density_2015)||0);
-  const income  = parseInt(p.median_income)||0;
+  const incomeValue = Number(p.median_income);
+  const income = Number.isFinite(incomeValue) ? Math.round(incomeValue) : null;
   const change  = parseInt(p.tree_change)||0;
   const label   = p.equity_label||'Middle';
-  if (p.investment_eligible === false)
+  const heat = Number(p.heat_proxy);
+  if (!isInvestmentEligible(p))
     return p.area_context === 'Insufficient income coverage'
       ? `${name} is visible for context but excluded from rankings because its income coverage is below the 90% quality threshold.`
       : `${name} is a non-residential planning area shown for geographic context. It is excluded from community investment, heat-proxy, and screening-score rankings.`;
-  const cStr    = change >= 0 ? `gained ${change.toLocaleString()} trees` : `lost ${Math.abs(change).toLocaleString()} trees`;
-  if (label==='Higher Priority')
-    return `${name} is among NYC's most underserved neighborhoods for green space. With only ${density} trees per km² and a median income of $${income.toLocaleString()}, it faces the sharpest need for street-tree investment.`;
-  if (label==='Above Average')
-    return `${name} falls well below the city average. At ${density} trees per km², it ${cStr} between 2005 and 2015. The gap with wealthier areas remains large.`;
-  if (label==='Middle')
-    return `${name} sits below the citywide average at ${density} trees per km². It ${cStr} since 2005. Targeted planting could meaningfully improve conditions here.`;
-  if (label==='Lower Priority')
-    return `${name} is among the higher-density street-tree neighborhoods at ${density} trees per km². It ${cStr} since 2005.`;
-  return `${name} has average tree coverage at ${density} trees per km² and ${cStr} between 2005 and 2015.`;
+  const refs = currentReferences();
+  if (metric === 'income') {
+    if (income == null) return 'A sufficiently covered income estimate is not available for this area.';
+    return `Estimated household income is ${income >= refs.income ? 'above' : 'below'} the eligible-area median. It adds equity context, but does not explain tree conditions by itself.`;
+  }
+  if (metric === 'equity') {
+    const position = label === 'Higher Priority' || label === 'Above Average' ? 'higher' : label === 'Lower Priority' || label === 'Below Average' ? 'lower' : 'middle';
+    return `Lower tree density and income overlap puts ${name} near the ${position} end of this project score. Use it to choose what to investigate next, not as a funding verdict.`;
+  }
+  if (metric === 'heat') {
+    const position = Number.isFinite(heat) && heat >= .75 ? 'higher' : Number.isFinite(heat) && heat >= .55 ? 'elevated' : Number.isFinite(heat) && heat >= .35 ? 'middle' : 'lower';
+    return `This tree-and-income proxy is ${position} relative to other eligible areas. It is not measured temperature, so pair it with official HVI and local observations.`;
+  }
+  return `Street-tree density is ${density >= refs.density ? 'above' : 'below'} the ranked-area average. The census count ${change >= 0 ? 'rose' : 'fell'} between 2005 and 2015.`;
 }
-
-/* ── NYC-WIDE CONSTANTS ────────────────────────────────────── */
-const NYC_AVG_DENSITY = 874;   // trees/km² citywide average
-const NYC_AVG_INCOME  = 63000; // median household income
-const NYC_AVG_PM25    = 8.49;  // μg/m³ 2015 annual mean (DOHMH UHF42)
-const PM25_SAFE       = 8.0;   // μg/m³ healthy threshold
 
 /* ── GEO MAP PANEL UPDATE ──────────────────────────────────── */
 function updatePanel(p) {
-  const label  = p.equity_label || 'Adequate';
-  const colors = EQ[label] || EQ['Adequate'];
+  currentNeighborhood = p;
+  const eligible = isInvestmentEligible(p);
+  const label  = eligible ? (p.equity_label || 'Middle') : 'Insufficient Data';
+  const colors = EQ[label] || EQ['Middle'];
   const trees  = parseInt(p.trees_2015)  || 0;
   const trees5 = parseInt(p.trees_2005)  || 0;
   const dens   = parseFloat(p.density_2015) || 0;
-  const income = parseInt(p.median_income)  || 0;
+  const incomeValue = p.median_income == null ? NaN : Number(p.median_income);
+  const income = Number.isFinite(incomeValue) ? Math.round(incomeValue) : null;
   const change = parseInt(p.tree_change)    || 0;
-  const score  = parseFloat(p.underserved)  || 0;
-  const heat   = parseFloat(p.heat_proxy)   || 0;
+  const scoreValue = p.underserved == null ? NaN : Number(p.underserved);
+  const heatValue = p.heat_proxy == null ? NaN : Number(p.heat_proxy);
+  const hasScore = eligible && Number.isFinite(scoreValue);
+  const hasHeat = eligible && Number.isFinite(heatValue);
+  const score = hasScore ? scoreValue : 0;
+  const heat = hasHeat ? heatValue : 0;
   const boro   = p.boro_name || p.borough || '';
+  const refs = currentReferences();
 
   // Shared header
-  document.getElementById('nta-name').textContent = p.nta_name || '—';
+  document.getElementById('nta-name').textContent = p.nta_name || 'Not available';
   document.getElementById('nta-boro').textContent = boro.toUpperCase();
   const badge = document.getElementById('eq-badge');
-  badge.textContent = label.toUpperCase();
+  badge.textContent = eligible ? label.toUpperCase() : 'CONTEXT ONLY';
   badge.style.cssText = `background:${colors.bg};border:1px solid ${colors.border};color:${colors.text}`;
 
   // ── TREES PANEL ───────────────────────────────────────────
@@ -855,179 +793,77 @@ function updatePanel(p) {
   chEl.className = 'sec-val ' + (change >= 0 ? 'pos' : 'neg');
   document.getElementById('tp-density').textContent = dens.toFixed(0);
 
-  // Density bar: scale to max(dens * 1.5, 2000) so bar isn't always at 100%
-  const densMax = Math.max(dens * 1.5, NYC_AVG_DENSITY * 2);
+  // Compare with the weighted density of eligible residential/community areas.
+  const densityReference = refs.density || dens;
+  document.getElementById('tp-density-reference').textContent = `${Math.round(densityReference).toLocaleString()}/km²`;
+  const densMax = Math.max(dens * 1.5, densityReference * 2, 1);
   const densPct = Math.min((dens / densMax) * 100, 100);
-  const avgPct  = Math.min((NYC_AVG_DENSITY / densMax) * 100, 100);
+  const avgPct  = Math.min((densityReference / densMax) * 100, 100);
   document.getElementById('tp-dens-fill').style.cssText =
-    `width:${densPct}%;background:${dens >= NYC_AVG_DENSITY ? 'var(--green)' : 'var(--orange)'}`;
+    `width:${densPct}%;background:${dens >= densityReference ? 'var(--green)' : 'var(--orange)'}`;
   document.getElementById('tp-dens-marker').style.left = avgPct + '%';
   document.getElementById('tp-dens-max').textContent = Math.round(densMax).toLocaleString();
   const densNote = document.getElementById('tp-dens-note');
-  densNote.textContent = dens >= NYC_AVG_DENSITY
-    ? `+${Math.round(dens - NYC_AVG_DENSITY).toLocaleString()} above avg`
-    : `${Math.round(NYC_AVG_DENSITY - dens).toLocaleString()} below avg`;
-  densNote.className = 'cmp-note ' + (dens >= NYC_AVG_DENSITY ? 'pos' : 'neg');
+  densNote.textContent = dens >= densityReference
+    ? `+${Math.round(dens - densityReference).toLocaleString()} above ranked-area average`
+    : `${Math.round(densityReference - dens).toLocaleString()} below ranked-area average`;
+  densNote.className = 'cmp-note ' + (dens >= densityReference ? 'pos' : 'neg');
 
   // ── INCOME PANEL ──────────────────────────────────────────
-  document.getElementById('tp-income-val').textContent = '$' + income.toLocaleString();
-  const aboveAvg = income >= NYC_AVG_INCOME;
+  const incomeReference = refs.income;
+  const incomeYear = Number(p.income_source_year);
+  document.getElementById('tp-income-val').textContent = income == null ? 'Not available' : '$' + income.toLocaleString();
+  document.getElementById('tp-income-source-label').textContent = incomeYear
+    ? `ACS ${incomeYear - 4}–${incomeYear} household income estimate`
+    : 'Median household income estimate';
+  const aboveAvg = income != null && income >= incomeReference;
   const incBadge = document.getElementById('tp-income-badge');
-  const diff = Math.abs(income - NYC_AVG_INCOME).toLocaleString();
-  incBadge.textContent = aboveAvg
-    ? `↑ $${diff} above NYC median ($63k)`
-    : `↓ $${diff} below NYC median ($63k)`;
+  const diff = income == null ? 0 : Math.abs(income - incomeReference);
+  incBadge.textContent = income == null
+    ? 'Income estimate unavailable'
+    : `${aboveAvg ? '↑' : '↓'} $${Math.round(diff).toLocaleString()} ${aboveAvg ? 'above' : 'below'} eligible-area median ($${Math.round(incomeReference).toLocaleString()})`;
   incBadge.style.cssText = aboveAvg
     ? 'background:rgba(47,160,94,0.12);border:1px solid rgba(47,160,94,0.3);color:#2fa05e'
     : 'background:rgba(217,79,0,0.12);border:1px solid rgba(217,79,0,0.3);color:#d94f00';
 
   // Income rank: use sorted ntaData if available, else estimate
-  let rankPct = income / 200000; // fallback estimate
-  if (ntaData.length > 1) {
-    const sorted = ntaData.filter(d => d.investment_eligible !== false).map(d => parseInt(d.median_income)||0).sort((a,b)=>a-b);
+  let rankPct = 0;
+  if (income != null && refs.rows.length > 1) {
+    const sorted = refs.rows.map(d => Number(d.median_income)).filter(Number.isFinite).sort((a,b)=>a-b);
     const rank = sorted.findIndex(v => v >= income);
-    rankPct = rank < 0 ? 1 : rank / sorted.length;
-    const rankNum = sorted.length - (rank < 0 ? sorted.length : rank);
-    document.getElementById('tp-rank-note').textContent = `#${rankNum} of ${sorted.length}`;
+    rankPct = rank < 0 ? 1 : rank / Math.max(sorted.length - 1, 1);
+    const rankNum = sorted.length - (rank < 0 ? sorted.length - 1 : rank);
+    document.getElementById('tp-rank-note').textContent = `#${rankNum} of ${sorted.length}, high to low`;
   } else {
     document.getElementById('tp-rank-note').textContent = '';
   }
   document.getElementById('tp-income-fill').style.width = (Math.min(rankPct, 1) * 100) + '%';
 
-  document.getElementById('tp-income-note').textContent =
-    aboveAvg
-      ? `${p.nta_name} has a higher-than-average income and tends to have better green space access.`
-      : `${p.nta_name}'s estimated income is below the comparison median. Tree density is shown separately; this site does not infer an investment cause.`;
-
   // ── EQUITY PANEL ──────────────────────────────────────────
-  document.getElementById('tp-score-big').textContent = score.toFixed(3);
-  document.getElementById('tp-score-num').textContent = score.toFixed(3);
-  const eqFill = document.getElementById('tp-score-fill');
-  eqFill.style.width      = (Math.min(score, 1) * 100) + '%';
-  eqFill.style.background = scoreToColor(score);
-  document.getElementById('tp-equity-summary').textContent = makeSummary(p);
+  document.getElementById('tp-score-big').textContent = hasScore ? score.toFixed(3) : 'Not ranked';
+  document.getElementById('tp-equity-summary').textContent = makeSummary(p, currentMetric);
 
   // ── HEAT PANEL ────────────────────────────────────────────
-  const hLbl = heatLabel(heat);
-  document.getElementById('tp-heat-val').textContent = heat.toFixed(3);
-  document.getElementById('tp-heat-val').style.color = hLbl.text2;
+  const hLbl = hasHeat ? heatLabel(heat) : EQ['Insufficient Data'];
+  document.getElementById('tp-heat-val').textContent = hasHeat ? heat.toFixed(3) : 'Not ranked';
+  document.getElementById('tp-heat-val').style.color = hLbl.text2 || hLbl.text;
 
   const hBadge = document.getElementById('tp-heat-badge');
-  hBadge.textContent = hLbl.text;
-  hBadge.style.cssText = `background:${hLbl.bg};border:1px solid ${hLbl.border};color:${hLbl.text2};font-family:var(--mono);font-size:0.65rem;letter-spacing:0.1em;border-radius:4px;padding:4px 10px;display:inline-block`;
-
-  document.getElementById('tp-heat-explain').textContent =
-    heat >= 0.75
-      ? `${p.nta_name} is among the highest heat-risk neighborhoods in NYC. With only ${dens.toFixed(0)} trees per km², there is very little shade to reduce surface temperatures during summer heat events.`
-      : heat >= 0.55
-      ? `${p.nta_name} has an elevated tree-and-income proxy. It is not measured temperature or official HVI.`
-      : heat >= 0.35
-      ? `${p.nta_name} has a moderate tree-and-income proxy. Consult official HVI and temperature data before drawing conclusions.`
-      : `${p.nta_name} has a relatively low tree-and-income proxy; this is not a heat-risk determination.`;
+  hBadge.textContent = hasHeat ? hLbl.text : 'CONTEXT ONLY';
+  hBadge.style.cssText = `background:${hLbl.bg};border:1px solid ${hLbl.border};color:${hLbl.text2 || hLbl.text};font-family:var(--mono);font-size:0.65rem;letter-spacing:0.1em;border-radius:4px;padding:4px 10px;display:inline-block`;
 
   // Borough average heat
-  if (ntaData.length > 1) {
-    const boroNeighbs = ntaData.filter(d => (d.boro_name || d.borough) === boro);
+  if (hasHeat && ntaData.length > 1) {
+    const boroNeighbs = ntaData.filter(d => isInvestmentEligible(d) && Number.isFinite(Number(d.heat_proxy)) && (d.boro_name || d.borough) === boro);
     if (boroNeighbs.length > 0) {
       const boroAvgHeat = boroNeighbs.reduce((s,d) => s + (parseFloat(d.heat_proxy)||0), 0) / boroNeighbs.length;
       const diff2 = heat - boroAvgHeat;
       document.getElementById('tp-boro-heat').textContent =
-        `${boroAvgHeat.toFixed(3)} (${boro}) — this neighborhood is ${diff2 >= 0 ? '+' : ''}${diff2.toFixed(3)} vs borough avg`;
+        `${boroAvgHeat.toFixed(3)} (${boro}); this neighborhood is ${diff2 >= 0 ? '+' : ''}${diff2.toFixed(3)} vs borough avg`;
     }
   } else {
-    document.getElementById('tp-boro-heat').textContent = 'Click neighborhoods to compare';
+    document.getElementById('tp-boro-heat').textContent = 'Not included in residential comparison';
   }
-
-  // ── PM2.5 in HEAT tab (compact row) ─────────────────────────
-  const pm25Val  = parseFloat(p.pm25) || 0;
-  const pm25El   = document.getElementById('tp-pm25-val');
-  if (pm25El) {
-    const pm25Color = pm25Val < 8.0 ? '#2fa05e' : pm25Val < 10.0 ? '#f5b800' : '#c0392b';
-    pm25El.innerHTML = `<span style="color:${pm25Color};font-family:var(--mono)">${pm25Val > 0 ? pm25Val.toFixed(1)+' μg/m³' : 'N/A'}</span>`;
-  }
-
-  // ── AIR QUALITY TAB ──────────────────────────────────────────
-  (function() {
-    const pm25      = parseFloat(p.pm25) || 0;
-    const estimated = !!p.pm25_estimated;
-
-    // Status label + color
-    const airLabel = pm25 > 0 ? 'MODELED ESTIMATE' : 'NTA CROSSWALK PENDING';
-    const airBg    = pm25 < 8.0 ? 'rgba(47,160,94,0.12)'  : pm25 < 10.0 ? 'rgba(245,184,0,0.12)'  : 'rgba(217,79,0,0.12)';
-    const airBor   = pm25 < 8.0 ? 'rgba(47,160,94,0.35)'  : pm25 < 10.0 ? 'rgba(245,184,0,0.35)'  : 'rgba(217,79,0,0.4)';
-    const airTxt   = pm25 < 8.0 ? '#2fa05e'                : pm25 < 10.0 ? '#f5b800'                : '#d94f00';
-
-    const airValEl = document.getElementById('tp-air-val');
-    if (airValEl) { airValEl.textContent = pm25 > 0 ? pm25.toFixed(1) : '—'; airValEl.style.color = airTxt; }
-
-    const airBadge = document.getElementById('tp-air-badge');
-    if (airBadge) {
-      airBadge.textContent = airLabel;
-      airBadge.style.cssText = `background:${airBg};border:1px solid ${airBor};color:${airTxt};font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;border-radius:4px;padding:4px 10px;display:inline-block`;
-    }
-
-    // Estimated note
-    const estEl = document.getElementById('tp-air-estimated');
-    if (estEl) {
-      if (estimated) {
-        estEl.textContent = `Using ${boro} borough average (estimated)`;
-        estEl.style.display = '';
-      } else {
-        estEl.style.display = 'none';
-      }
-    }
-
-    // Stat cards
-    const levelEl = document.getElementById('tp-air-level');
-    if (levelEl) levelEl.textContent = pm25 > 0 ? pm25.toFixed(1)+' μg/m³' : '—';
-
-    const vsSafeEl = document.getElementById('tp-air-vs-safe');
-    if (vsSafeEl) {
-      const diff = pm25 - PM25_SAFE;
-      const pct  = Math.round(Math.abs(diff) / PM25_SAFE * 100);
-      vsSafeEl.textContent  = diff >= 0 ? `+${pct}% above` : `${pct}% below`;
-      vsSafeEl.className    = 'sec-val ' + (diff >= 0 ? 'neg' : 'pos');
-    }
-
-    // PM2.5 bar (scale to max of pm25*1.4, safe*2, or 14)
-    const barMax  = Math.max(pm25 * 1.4, PM25_SAFE * 2, 14);
-    const fillPct = Math.min((pm25 / barMax) * 100, 100);
-    const safePct = Math.min((PM25_SAFE / barMax) * 100, 100);
-    const fillColor = pm25 <= PM25_SAFE ? 'var(--green)' : pm25 < 10 ? 'var(--amber)' : 'var(--orange)';
-    const fillEl = document.getElementById('tp-air-fill');
-    if (fillEl) fillEl.style.cssText = `width:${fillPct}%;background:${fillColor}`;
-    const safeMarker = document.getElementById('tp-air-safe-marker');
-    if (safeMarker) safeMarker.style.left = safePct + '%';
-    const maxEl = document.getElementById('tp-air-max');
-    if (maxEl) maxEl.textContent = barMax.toFixed(0);
-    const noteEl = document.getElementById('tp-air-note');
-    if (noteEl) {
-      const absDiff = Math.abs(pm25 - PM25_SAFE).toFixed(1);
-      noteEl.textContent  = pm25 > 0 ? `${absDiff} μg/m³ from reference value` : 'Not available at NTA geography';
-      noteEl.className    = 'cmp-note ' + (pm25 <= PM25_SAFE ? 'pos' : 'neg');
-    }
-
-    // Tree density mini-cards
-    const densMini = document.getElementById('tp-air-tree-dens');
-    if (densMini) densMini.textContent = Math.round(dens).toLocaleString()+' /km²';
-    const pm25Mini = document.getElementById('tp-air-tree-pm25');
-    if (pm25Mini) pm25Mini.textContent = pm25 > 0 ? pm25.toFixed(1)+' μg/m³' : '—';
-
-    // Insight text
-    const insightEl = document.getElementById('tp-air-insight');
-    if (insightEl) {
-      const lowTrees  = dens < NYC_AVG_DENSITY;
-      const highPm25  = pm25 > NYC_AVG_PM25;
-      if (lowTrees && highPm25)
-        insightEl.textContent = 'Tree density and air pollution are separate indicators. This atlas does not make a causal attribution.';
-      else if (!lowTrees && !highPm25)
-        insightEl.textContent = 'Strong tree canopy here likely contributes to cleaner air. Trees act as natural filters for fine particle pollution.';
-      else if (!lowTrees && highPm25)
-        insightEl.textContent = 'Despite decent tree cover, pollution here is elevated, likely from nearby highways or industrial activity.';
-      else
-        insightEl.textContent = 'Relatively clean air despite limited trees, possibly due to distance from major traffic sources.';
-    }
-  })();
 
   // Show the loaded state
   document.getElementById('placeholder').style.display = 'none';
@@ -1036,24 +872,61 @@ function updatePanel(p) {
   void dataEl.offsetWidth;
   dataEl.classList.add('visible');
 
-  buildBenchmarkPanel(p);
+  buildScoreDetails(p);
+}
+
+function openNeighborhood(p, shouldZoom) {
+  if (!p) return;
+  resetHighlights();
+  highlightNTA(p.nta_name, '#2fa05e');
+  updatePanel(p);
+  document.getElementById('nta-search').value = p.nta_name || '';
+  if (shouldZoom) zoomToNTA(p.nta_name);
+  const key = p.nta_code || p.nta_name;
+  if (key && window.history && window.history.replaceState) {
+    window.history.replaceState(null, '', '#nta=' + encodeURIComponent(key));
+  }
 }
 
 /* ── METRIC TAB SWITCH (inside right panel) ────────────────── */
 function switchMetricTab(tabKey) {
-  document.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.mtab[data-tab="${tabKey}"]`).classList.add('active');
+  currentMetric = tabKey;
+  document.querySelectorAll('.mtab').forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
+  });
+  const activeButton = document.querySelector(`.mtab[data-tab="${tabKey}"]`);
+  activeButton.classList.add('active');
+  activeButton.setAttribute('aria-selected', 'true');
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   const tp = document.getElementById('tp-' + tabKey);
   if (tp) tp.classList.add('active');
+
+  const metricLayers = {
+    trees:'Tree Density (2015)',
+    income:'Median Household Income',
+    equity:'Project Screening Score',
+    heat:'Tree + Income Screening Proxy',
+  };
+  const frame = document.getElementById('map-frame');
+  if (frame && frame.contentWindow && metricLayers[tabKey]) {
+    Object.values(metricLayers).forEach(name =>
+      frame.contentWindow.postMessage({type:'toggle_layer', name:name, show:name === metricLayers[tabKey]}, '*')
+    );
+  }
+  if (currentNeighborhood) {
+    document.getElementById('tp-equity-summary').textContent = makeSummary(currentNeighborhood, tabKey);
+  }
 }
 
 window.addEventListener('message', function(e) {
   if (!e.data || e.data.type !== 'nta_click') return;
-  const props = e.data.props;
-  resetHighlights();
-  highlightNTA(props.nta_name, '#2fa05e');
-  updatePanel(props);
+  const clicked = e.data.props || {};
+  const props = ntaData.find(d =>
+    (clicked.nta_code && d.nta_code === clicked.nta_code) ||
+    (!clicked.nta_code && d.nta_name === clicked.nta_name)
+  ) || clicked;
+  openNeighborhood(props, false);
 });
 
 /* ── MAP HELPERS ───────────────────────────────────────────── */
@@ -1075,86 +948,25 @@ function zoomToNTA(ntaName) {
 
 /* ── HTML ESCAPE ───────────────────────────────────────────── */
 function esc(s) {
-  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-/* ── BENCHMARK RATING ──────────────────────────────────────── */
-function benchRating(val, target, better) {
-  if (better === 'higher') {
-    const r = target > 0 ? val / target : 1;
-    return r >= 0.8 ? 'good' : r >= 0.5 ? 'warn' : 'bad';
+/* ── SCREENING SCORE DETAILS ───────────────────────────────── */
+function buildScoreDetails(p) {
+  const details = document.getElementById('tp-score-details');
+  if (!details) return;
+  if (!isInvestmentEligible(p) || !Number.isFinite(Number(p.underserved))) {
+    details.innerHTML = `<div class="score-note">This area stays on the map for context but does not compete with residential communities in the project ranking.</div>`;
+    return;
   }
-  if (val <= 0) return 'good';
-  const r = val / target;
-  return r <= 1.2 ? 'good' : r <= 1.6 ? 'warn' : 'bad';
-}
-
-/* ── BENCHMARK PANEL (auto-updates in EQUITY tab on every map click) ── */
-function buildBenchmarkPanel(p) {
-  const bench = document.getElementById('tp-equity-bench');
-  if (!bench) return;
-  const eqA = EQ[p.equity_label] || EQ['Middle'];
-  const metrics = [
-    { label:'Tree Density',      bFmt:'≥ 1,000/km²', bTarget:1000,  better:'higher',
-      aVal:parseFloat(p.density_2015)||0, fmt: v => Math.round(v).toLocaleString()+'/km²' },
-    { label:'Median Income',     bFmt:'$63,000',      bTarget:63000, better:'higher',
-      aVal:parseInt(p.median_income)||0,  fmt: v => '$'+v.toLocaleString() },
-    { label:'Underserved Score', bFmt:'< 0.30',       bTarget:0.30,  better:'lower',
-      aVal:parseFloat(p.underserved)||0,  fmt: v => v.toFixed(3) },
-    { label:'Heat Risk',         bFmt:'< 0.40',       bTarget:0.40,  better:'lower',
-      aVal:parseFloat(p.heat_proxy)||0,   fmt: v => v.toFixed(3) },
-    { label:'PM2.5',             bFmt:'< 8.0 μg/m³', bTarget:8.0,   better:'lower',
-      aVal:parseFloat(p.pm25)||0,         fmt: v => v > 0 ? v.toFixed(1)+' μg/m³' : '—' },
-    { label:'Trees Gained',      bFmt:'positive',     bTarget:1,     better:'higher',
-      aVal:parseInt(p.tree_change)||0,    fmt: v => (v > 0 ? '+' : '') + v.toLocaleString() },
-  ];
-
-  let scoreA = 0, total = 0;
-  metrics.forEach(function(m) {
-    if (m.label === 'PM2.5' && m.aVal <= 0) return;
-    total++;
-    if (benchRating(m.aVal, m.bTarget, m.better) === 'good') scoreA++;
-  });
-
-  const rowsHtml = metrics.map(function(m) {
-    if (m.label === 'PM2.5' && m.aVal <= 0) return '';
-    const rA = benchRating(m.aVal, m.bTarget, m.better);
-    return `<div class="ct-grid-row">
-      <div class="ct-metric-lbl">${m.label}</div>
-      <div class="ct-cell ${rA}">${m.fmt(m.aVal)}</div>
-      <div class="ct-cell bench-tgt">${m.bFmt}${rA === 'good' ? ' ✓' : ''}</div>
-    </div>`;
-  }).join('');
-
-  const nameA = esc(p.nta_name || 'This neighborhood');
-  const densGap = Math.max(0, 1000 - (parseFloat(p.density_2015)||0));
-  const incA    = parseInt(p.median_income)||0;
-  const pm25A   = parseFloat(p.pm25)||0;
-  const parts   = [];
-  if (densGap > 150) parts.push(`missing ~${Math.round(densGap).toLocaleString()} trees/km² to reach a healthy canopy level`);
-  if (incA < 63000)  parts.push(`median income is ${Math.round(((63000-incA)/63000)*100)}% below the NYC median of $63,000`);
-  if (pm25A > 8.5)   parts.push(`PM2.5 is ${Math.round(((pm25A-8.0)/8.0)*100)}% above the clean air benchmark`);
-  const gapText = parts.length
-    ? `${nameA} is ${parts.length === 1 ? parts[0] : parts.slice(0,-1).join(', ')+', and '+parts[parts.length-1]}. It currently meets <b>${scoreA} of ${total}</b> healthy neighborhood benchmarks.`
-    : `${nameA} meets <b>${scoreA} of ${total}</b> project comparison points. These are not health or regulatory standards.`;
-
-  bench.innerHTML = `
-    <div class="ct-grid-hdr">
-      <div></div>
-      <div class="ct-hdr-cell a-hdr">
-        <span class="ct-hdr-name">${esc(p.nta_name||'—')}</span>
-        <span class="ct-hdr-boro">${esc((p.boro_name||'').toUpperCase())}</span>
-        <span class="ct-hdr-badge" style="background:${eqA.bg};border:1px solid ${eqA.border};color:${eqA.text}">${esc((p.equity_label||'').toUpperCase())}</span>
-      </div>
-      <div class="ct-hdr-cell bench-hdr">
-        <span class="ct-hdr-name" style="color:#d4af37">🏆 NYC Healthy Benchmark</span>
-        <span class="ct-hdr-badge" style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.4);color:#d4af37">TARGET</span>
-      </div>
+  const density = Math.round(Number(p.density_2015) || 0).toLocaleString();
+  const income = Math.round(Number(p.median_income) || 0).toLocaleString();
+  details.innerHTML = `
+    <div class="score-breakdown">
+      <div class="score-part"><strong>${density} / km²</strong><span>Street-tree density, 55% of score</span></div>
+      <div class="score-part"><strong>$${income}</strong><span>Estimated median income, 45% of score</span></div>
     </div>
-    ${rowsHtml}
-    <div class="ct-score"><span>Meets <b>${scoreA} of ${total}</b> healthy benchmarks</span></div>
-    <div class="ct-gap">${gapText}</div>
-  `;
+    <div class="score-note">Use this as a starting signal. Check heat, health, land use, and community evidence before funding.</div>`;
 }
 
 /* ── BOROUGH STATS ─────────────────────────────────────────── */
@@ -1164,7 +976,7 @@ function buildBoroughStats() {
 
   // Aggregate by borough
   const agg = {};
-  ntaData.filter(d => d.investment_eligible !== false).forEach(function(d) {
+  ntaData.filter(isInvestmentEligible).forEach(function(d) {
     const b = d.boro_name || d.borough || 'Unknown';
     if (!agg[b]) agg[b] = { trees:0, density:[], income:[], underserved:0, ntaCount:0 };
     agg[b].trees   += parseInt(d.trees_2015)||0;
@@ -1211,7 +1023,7 @@ function buildBoroughStats() {
   document.getElementById('borough-charts').innerHTML =
     makeBarChart('AVG TREE DENSITY (trees / km²)', densityItems,  '#2fa05e') +
     makeBarChart('AVG MEDIAN INCOME ($)',           incomeItems,   '#7c52e0') +
-    makeBarChart('UNDERSERVED NTAs (score > 0.65)', undersvItems,  '#d94f00');
+    makeBarChart('HIGHER-SCORE AREAS (> 0.65)', undersvItems,  '#d94f00');
 
   // Re-sort by density for table
   const tableRows = [...boroughs].sort((a,b)=>b.avgDensity-a.avgDensity).map(b => `
@@ -1234,7 +1046,7 @@ function buildHeatIndex() {
   heatBuilt = true;
 
   const sorted = ntaData
-    .filter(d => d.heat_proxy != null && d.investment_eligible !== false)
+    .filter(d => isInvestmentEligible(d) && d.heat_proxy != null && Number.isFinite(Number(d.heat_proxy)))
     .map(d => ({ ...d, _heat: parseFloat(d.heat_proxy)||0 }))
     .sort((a,b) => b._heat - a._heat)
     .slice(0, 20);
@@ -1252,8 +1064,8 @@ function buildHeatIndex() {
     return `<div class="heat-card">
       <div class="heat-card-top">
         <div>
-          <div class="heat-nta">${d.nta_name||'—'}</div>
-          <div class="heat-boro">${boro}</div>
+          <div class="heat-nta">${esc(d.nta_name||'Not available')}</div>
+          <div class="heat-boro">${esc(boro)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="heat-rank">#${i+1}</div>
@@ -1264,11 +1076,11 @@ function buildHeatIndex() {
         <div class="heat-bar-track">
           <div class="heat-bar-fill" style="width:${pct}%;background:${heatColor(heat)}"></div>
         </div>
-        <div class="heat-bar-ends"><span>LOWER RISK</span><span>${heat.toFixed(3)}</span></div>
+        <div class="heat-bar-ends"><span>LOWER PROXY</span><span>${heat.toFixed(3)}</span></div>
       </div>
       <div class="heat-stats">
-        <div class="heat-stat">🌳 Density <span>${density} / km²</span></div>
-        <div class="heat-stat">💵 Income <span>$${income.toLocaleString()}</span></div>
+        <div class="heat-stat">Density <span>${density} / km²</span></div>
+        <div class="heat-stat">Income <span>$${income.toLocaleString()}</span></div>
       </div>
     </div>`;
   }).join('');
@@ -1297,6 +1109,10 @@ function injectIntoIframe() {
 
       /* Layer name lookup */
       window.__layerMap={};
+      Object.entries(window.__atlasLayerVars||{}).forEach(function(entry){
+        var layer=window[entry[1]];
+        if(layer) window.__layerMap[entry[0]]=layer;
+      });
       for(var k in window){try{var v=window[k];if(v&&v._layers&&Array.isArray(v._layers)){v._layers.forEach(function(item){if(item.overlay&&item.name)window.__layerMap[item.name]=item.layer;});}}catch(e){}}
 
       /* Collect NTA data + attach click handlers */
@@ -1338,34 +1154,47 @@ function injectIntoIframe() {
         if(show) layer.addTo(map); else map.removeLayer(layer);
       };
 
+      function walkFeatures(layer,visit){
+        if(!layer) return;
+        if(layer.feature&&layer.feature.properties) visit(layer);
+        if(layer.eachLayer) layer.eachLayer(function(child){walkFeatures(child,visit);});
+      }
+
       /* Listen for highlight/clear messages from parent dashboard */
       window.addEventListener('message',function(msg){
         if(!msg.data) return;
         if(msg.data.type==='highlight_nta'){
           var nta=msg.data.nta_name,color=msg.data.color||'#fff',weight=msg.data.weight||2.5;
           Object.values(window.__layerMap||{}).forEach(function(layer){
-            if(layer&&layer.eachLayer)layer.eachLayer(function(sub){
-              if(sub.feature&&sub.feature.properties&&sub.feature.properties.nta_name===nta)
+            walkFeatures(layer,function(sub){
+              if(sub.feature.properties.nta_name===nta){
+                if(!sub.__atlasBaseStyle) sub.__atlasBaseStyle={
+                  color:sub.options.color,weight:sub.options.weight,fillOpacity:sub.options.fillOpacity
+                };
                 sub.setStyle({color:color,weight:weight,fillOpacity:0.9});
+              }
             });
           });
         }
         if(msg.data.type==='clear_highlights'){
           Object.values(window.__layerMap||{}).forEach(function(layer){
-            if(layer&&layer.eachLayer)layer.eachLayer(function(sub){
-              if(sub.feature)sub.setStyle({color:'#ffffff',weight:0.5,fillOpacity:0.80});
+            walkFeatures(layer,function(sub){
+              if(sub.__atlasBaseStyle){
+                sub.setStyle(sub.__atlasBaseStyle);
+                delete sub.__atlasBaseStyle;
+              }
             });
           });
         }
         if(msg.data.type==='zoom_to_nta'){
           var znta=msg.data.nta_name,zfound=false;
           Object.values(window.__layerMap||{}).forEach(function(layer){
-            if(zfound||!layer||!layer.eachLayer) return;
-            layer.eachLayer(function(sub){
+            if(zfound) return;
+            walkFeatures(layer,function(sub){
               if(zfound) return;
-              if(sub.feature&&sub.feature.properties&&sub.feature.properties.nta_name===znta){
+              if(sub.feature.properties.nta_name===znta){
                 zfound=true;
-                if(sub.getBounds) map.fitBounds(sub.getBounds(),{padding:[40,40]});
+                if(sub.getBounds) map.fitBounds(sub.getBounds(),{padding:[48,48],maxZoom:14});
               }
             });
           });
@@ -1380,59 +1209,147 @@ function injectIntoIframe() {
   } catch(e) { console.warn('iframe injection:', e); }
 }
 
-function extractNeighborhoodData() {
-  const re = /\{[^{}]*?"nta_name"[^{}]*?\}/g;
-  function parseMatches(matches) {
-    const seen = {}, found = [];
-    for (const m of (matches || [])) {
-      try {
-        const obj = JSON.parse(m);
-        if (obj.nta_name && !seen[obj.nta_name]) { seen[obj.nta_name] = true; found.push(obj); }
-      } catch(e) {}
-    }
-    return found;
+function buildFindings() {
+  const eligible = eligibleNeighborhoods();
+  if (!eligible.length) return;
+  const byDensity = eligible
+    .filter(d => Number.isFinite(Number(d.density_2015)))
+    .sort((a,b) => Number(a.density_2015) - Number(b.density_2015));
+  const byScore = eligible
+    .filter(d => Number.isFinite(Number(d.underserved)))
+    .sort((a,b) => Number(b.underserved) - Number(a.underserved));
+  const byGain = eligible
+    .filter(d => Number.isFinite(Number(d.tree_change)))
+    .sort((a,b) => Number(b.tree_change) - Number(a.tree_change));
+  const low = byDensity[0];
+  const high = byDensity[byDensity.length - 1];
+  const priority = byScore[0];
+  const comeback = byGain[0];
+  const excluded = ntaData.length - eligible.length;
+
+  if (low && high) document.getElementById('finding-spread').textContent =
+    `${low.nta_name} has ${Math.round(Number(low.density_2015)).toLocaleString()} street trees per km², while ${high.nta_name} reaches ${Math.round(Number(high.density_2015)).toLocaleString()}. Same city, wildly different sidewalk shade.`;
+  if (priority) document.getElementById('finding-priority').textContent =
+    `${priority.nta_name} currently tops the project screening score. That makes it a smart place to investigate next, not an automatic funding verdict.`;
+  if (comeback) document.getElementById('finding-change').textContent =
+    `${comeback.nta_name} posted the biggest street-tree gain, adding ${Math.round(Number(comeback.tree_change)).toLocaleString()} trees between the 2005 and 2015 censuses. A proper tree comeback.`;
+  document.getElementById('finding-guardrail').textContent =
+    `${excluded} non-residential or low-coverage areas stay visible but sit out the rankings. Airports and cemeteries do not get to compete with communities.`;
+}
+
+function resetDerivedViews() {
+  boroughBuilt = false;
+  heatBuilt = false;
+  document.getElementById('borough-charts').innerHTML = '';
+  document.getElementById('borough-tbody').innerHTML = '';
+  document.getElementById('borough-loading').style.display = '';
+  document.getElementById('borough-content').style.display = 'none';
+  document.getElementById('heat-grid').innerHTML = '';
+  document.getElementById('heat-loading').style.display = '';
+  document.getElementById('heat-content').style.display = 'none';
+}
+
+function setNeighborhoodData(rows) {
+  const byCode = new Map();
+  rows.forEach(function(row) {
+    if (row && row.nta_code && row.nta_name && !byCode.has(row.nta_code)) byCode.set(row.nta_code, row);
+  });
+  const validated = Array.from(byCode.values());
+  if (validated.length !== rows.length || validated.length < 190 || validated.filter(isInvestmentEligible).length < 150) {
+    throw new Error('Neighborhood snapshot did not pass client-side completeness checks');
   }
-  // Try reading script tags from iframe contentDocument
-  try {
-    const iDoc = mapFrame.contentDocument;
-    if (iDoc) {
-      let found = [];
-      for (const sc of Array.from(iDoc.querySelectorAll('script'))) {
-        const text = sc.textContent || '';
-        if (!text.includes('nta_name')) continue;
-        found = found.concat(parseMatches(text.match(re)));
-      }
-      // Deduplicate across script tags
-      const deduped = [];
-      const seen2 = {};
-      for (const obj of found) {
-        if (!seen2[obj.nta_name]) { seen2[obj.nta_name] = true; deduped.push(obj); }
-      }
-      if (deduped.length > 0) {
-        ntaData = deduped;
-        buildBoroughStats();
-        buildHeatIndex();
-        return;
-      }
+  ntaData = validated;
+  resetDerivedViews();
+  buildBoroughStats();
+  buildHeatIndex();
+  buildFindings();
+
+  document.getElementById('nta-options').innerHTML = ntaData
+    .slice()
+    .sort((a,b) => String(a.nta_name).localeCompare(String(b.nta_name)))
+    .map(d => `<option value="${esc(d.nta_name)}">${esc(d.boro_name || d.borough || '')}</option>`)
+    .join('');
+
+  const sample = ntaData[0] || {};
+  const treeYear = Number(sample.tree_source_year) || 2015;
+  const incomeYear = Number(sample.income_source_year);
+  const eligibleCount = eligibleNeighborhoods().length;
+  document.getElementById('ph-count').textContent = `${ntaData.length} areas ready. Click the map to explore one.`;
+  document.getElementById('nav-vintage').textContent = incomeYear
+    ? `Trees ${treeYear} • ACS ${incomeYear}`
+    : `Trees ${treeYear}`;
+  document.getElementById('data-status').innerHTML = `
+    <span><strong>VALIDATED</strong> ${ntaData.length} unique areas</span>
+    <span>${eligibleCount} residential/community areas ranked</span>
+    <span>${ntaData.length - eligibleCount} context areas excluded</span>
+    <span>Trees ${treeYear}${incomeYear ? ` • ACS ${incomeYear - 4}–${incomeYear}` : ''}</span>
+    <a href="docs/methodology.md">How this works</a>`;
+
+  const hashKey = decodeURIComponent((window.location.hash.match(/^#nta=(.+)$/) || [])[1] || '').toLowerCase();
+  if (hashKey) {
+    const linked = ntaData.find(d => String(d.nta_code || '').toLowerCase() === hashKey || String(d.nta_name || '').toLowerCase() === hashKey);
+    if (linked) {
+      openNeighborhood(linked, false);
+      [700, 1800, 3400, 5200].forEach(delay => {
+        setTimeout(() => zoomToNTA(linked.nta_name), delay);
+      });
     }
-  } catch(e) {}
-  // Fallback: fetch the HTML as text
-  fetch('nyc_trees_map.html')
-    .then(function(r) { return r.text(); })
-    .then(function(html) {
-      const found = parseMatches(html.match(re));
-      if (found.length > 0) {
-        ntaData = found;
-        buildBoroughStats();
-        buildHeatIndex();
-      }
-    })
-    .catch(function(e) { console.warn('extractNeighborhoodData fetch failed:', e); });
+  }
+}
+
+async function extractNeighborhoodData() {
+  const urls = [
+    'data/processed/nta_environmental_snapshot.geojson',
+    'https://j3ssc0des.github.io/Enviromental-Equity-In-NYC/data/processed/nta_environmental_snapshot.geojson',
+  ];
+  const errors = [];
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, { cache:'no-cache', credentials:'omit' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const geojson = await response.json();
+      const rows = (geojson.features || []).map(feature => feature.properties || {});
+      setNeighborhoodData(rows);
+      return;
+    } catch (error) {
+      errors.push(`${url}: ${error.message}`);
+    }
+  }
+  console.warn('Validated neighborhood data unavailable', errors);
+  document.getElementById('data-status').innerHTML = '<span><strong>DATA UNAVAILABLE</strong> Rankings are hidden rather than showing stale values.</span><a href="docs/methodology.md">Methodology</a>';
+  document.getElementById('borough-loading').textContent = 'Validated data unavailable. Rankings are hidden.';
+  document.getElementById('heat-loading').textContent = 'Validated data unavailable. Rankings are hidden.';
 }
 
 mapFrame.addEventListener('load', function() {
   setTimeout(injectIntoIframe, 900);
-  setTimeout(extractNeighborhoodData, 2000);
+});
+
+extractNeighborhoodData();
+
+document.getElementById('nta-search').addEventListener('change', function() {
+  const query = this.value.trim().toLowerCase();
+  const match = ntaData.find(d => String(d.nta_name || '').toLowerCase() === query)
+    || ntaData.find(d => String(d.nta_name || '').toLowerCase().startsWith(query));
+  if (match) openNeighborhood(match, true);
+});
+
+document.getElementById('nta-search').addEventListener('keydown', function(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    this.dispatchEvent(new Event('change'));
+  }
+});
+
+document.getElementById('share-neighborhood').addEventListener('click', async function() {
+  const button = this;
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    button.textContent = 'Copied';
+  } catch (error) {
+    button.textContent = 'URL ready';
+  }
+  setTimeout(() => { button.textContent = 'Copy link'; }, 1600);
 });
 
 /* ── NAV TAB SWITCHING ─────────────────────────────────────── */
@@ -1441,8 +1358,12 @@ document.querySelectorAll('.nav-tab').forEach(function(btn) {
     const tab = this.dataset.tab;
 
     // Update active state
-    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(function(b) {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
     this.classList.add('active');
+    this.setAttribute('aria-selected', 'true');
 
     // Switch views
     document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
@@ -1457,6 +1378,8 @@ document.querySelectorAll('.nav-tab').forEach(function(btn) {
 /* ── PANEL METRIC TABS ─────────────────────────────────────── */
 document.querySelectorAll('.mtab').forEach(function(btn) {
   btn.addEventListener('click', function() {
+    document.querySelectorAll('.mtab').forEach(b => b.setAttribute('aria-selected', 'false'));
+    this.setAttribute('aria-selected', 'true');
     switchMetricTab(this.dataset.tab);
   });
 });
