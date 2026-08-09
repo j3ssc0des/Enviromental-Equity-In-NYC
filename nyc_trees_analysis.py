@@ -174,12 +174,18 @@ def _fetch(url, params=None, max_retries=3, timeout=40):
 def _fetch_acs_income():
     """Fetch the latest ACS five-year tract income from Census Reporter."""
     rows = []
-    response = _fetch(
-        "https://api.censusreporter.org/1.0/data/show/latest",
-        params={"table_ids":"B19013,B11001", "geo_ids":"140|04000US36"},
-        timeout=90,
-    )
-    payload=response.json()
+    cache_path="data/raw/acs_income.json"
+    if os.path.exists(cache_path):
+        with open(cache_path,encoding="utf-8") as handle:
+            payload=json.load(handle)
+        print("   ✓ Using ACS payload verified by source audit")
+    else:
+        response = _fetch(
+            "https://api.censusreporter.org/1.0/data/show/latest",
+            params={"table_ids":"B19013,B11001", "geo_ids":"140|04000US36"},
+            timeout=90,
+        )
+        payload=response.json()
     release_year=int(str(payload["release"]["years"]).split("-")[-1])
     nyc_counties={"005","047","061","081","085"}
     for geoid,tables in payload["data"].items():

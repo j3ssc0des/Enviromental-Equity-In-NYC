@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[4]
 SOURCES = ROOT / "data" / "sources.json"
 REPORT = ROOT / "data" / "metadata" / "source-audit.json"
+ACS_CACHE = ROOT / "data" / "raw" / "acs_income.json"
 
 def get_json(url):
     result=subprocess.run(["curl","-fsSL","--max-time","45","-A","nyc-environmental-atlas-audit/1.0",url],
@@ -22,6 +23,8 @@ def audit(source):
              "table_ids=B19013%2CB11001&geo_ids=140%7C04000US36")
         payload=get_json(url)
     if source["kind"]=="census_reporter":
+        ACS_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        ACS_CACHE.write_text(json.dumps(payload)+"\n")
         sample=next(iter(payload["data"].values()))
         fields=set(sample["B19013"]["estimate"])|set(sample["B11001"]["estimate"])
     else:

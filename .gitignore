@@ -23,6 +23,8 @@ build/
 *.tmp
 *.log
 .cache/
+data/raw/*.json
+data/metadata/source-audit.json
 
 # OS
 Thumbs.db
@@ -35,7 +37,6 @@ venv/
 .venv/
 __pycache__/
 *.pyc
-
 
 
 
