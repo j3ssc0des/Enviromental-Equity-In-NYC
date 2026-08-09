@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Audit declared public data sources and write a machine-readable report."""
-import json, os, subprocess, sys, urllib.parse
+import json, subprocess, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,14 +18,14 @@ def audit(source):
         url = f"https://data.cityofnewyork.us/resource/{source['id']}.json?$limit=1"
         payload=get_json(url)
     else:
-        variables = ",".join(source["required_fields"])
-        query=urllib.parse.urlencode([
-            ("get",f"NAME,{variables}"),("for","tract:*"),
-            ("in","state:36"),("in","county:061"),
-        ] + ([("key",os.environ["CENSUS_API_KEY"])] if os.getenv("CENSUS_API_KEY") else []))
-        url = "https://api.census.gov/data/2015/acs/acs5?"+query
+        url=("https://api.censusreporter.org/1.0/data/show/latest?"
+             "table_ids=B19013%2CB11001&geo_ids=140%7C05000US36061")
         payload=get_json(url)
-    fields = set(payload[0] if source["kind"] == "census" else (payload[0] if payload else {}))
+    if source["kind"]=="census_reporter":
+        sample=next(iter(payload["data"].values()))
+        fields=set(sample["B19013"]["estimate"])|set(sample["B11001"]["estimate"])
+    else:
+        fields=set(payload[0] if payload else {})
     missing = sorted(set(source["required_fields"]) - fields)
     return {"id":source["id"], "name":source["name"], "status":source["status"],
             "reachable":True, "missing_required_fields":missing, "ok":not missing, "checked_url":url}

@@ -171,30 +171,24 @@ def _fetch(url, params=None, max_retries=3, timeout=40):
             print(f"     Retrying in {delay}s…")
             time.sleep(delay)
 
-def _fetch_acs_2015_income():
-    """Fetch 2011–2015 ACS tract income and households for NYC counties."""
+def _fetch_acs_income():
+    """Fetch the latest ACS five-year tract income from Census Reporter."""
     rows = []
     for county in ("005", "047", "061", "081", "085"):
-        params = {
-            "get": "NAME,B19013_001E,B19013_001M,B11001_001E",
-            "for": "tract:*",
-            "in": f"state:36 county:{county}",
-        }
-        if os.getenv("CENSUS_API_KEY"):
-            params["key"] = os.environ["CENSUS_API_KEY"]
         response = _fetch(
-            "https://api.census.gov/data/2015/acs/acs5",
-            params=params,
+            "https://api.censusreporter.org/1.0/data/show/latest",
+            params={"table_ids":"B19013,B11001", "geo_ids":f"140|05000US36{county}"},
         )
-        payload = response.json()
-        rows.extend(dict(zip(payload[0], values)) for values in payload[1:])
-    acs = pd.DataFrame(rows).rename(columns={
-        "B19013_001E": "tract_income",
-        "B19013_001M": "tract_income_moe",
-        "B11001_001E": "households",
-        "county": "COUNTY",
-        "tract": "TRACT",
-    })
+        payload=response.json()
+        release_year=int(str(payload["release"]["years"]).split("-")[-1])
+        for geoid,tables in payload["data"].items():
+            raw=geoid.replace("14000US","")
+            rows.append({"COUNTY":raw[2:5],"TRACT":raw[5:11],
+                "tract_income":tables["B19013"]["estimate"].get("B19013001"),
+                "tract_income_moe":tables["B19013"]["error"].get("B19013001"),
+                "households":tables["B11001"]["estimate"].get("B11001001"),
+                "income_source_year":release_year})
+    acs = pd.DataFrame(rows)
     for col in ("tract_income", "tract_income_moe", "households"):
         acs[col] = pd.to_numeric(acs[col], errors="coerce")
     acs.loc[acs["tract_income"] < 0, "tract_income"] = np.nan
@@ -299,6 +293,21 @@ if LIVE_DATA:
         gdf_boundaries = gdf_boundaries.set_crs("EPSG:4326", allow_override=True)
         print(f"   ✓ {len(gdf_boundaries)} NTA polygons assembled")
 
+        print("📡 Building current-tract to 2010-NTA spatial crosswalk…")
+        current_tracts=gpd.read_file(
+            "https://www2.census.gov/geo/tiger/GENZ2024/shp/cb_2024_36_tract_500k.zip"
+        )
+        current_tracts=current_tracts[current_tracts["COUNTYFP"].isin(nyc_counties)].copy()
+        current_tracts["COUNTY"]=current_tracts["COUNTYFP"].astype(str).str.zfill(3)
+        current_tracts["TRACT"]=current_tracts["TRACTCE"].astype(str).str.zfill(6)
+        tract_points=current_tracts.to_crs("EPSG:2263")
+        tract_points["geometry"]=tract_points.geometry.representative_point()
+        nta_shapes=gdf_boundaries[["nta_code","geometry"]].to_crs("EPSG:2263")
+        current_xwalk=gpd.sjoin(
+            tract_points[["COUNTY","TRACT","geometry"]], nta_shapes,
+            how="left", predicate="within",
+        )[["COUNTY","TRACT","nta_code"]]
+
         # Merge tree counts onto real boundary polygons
         # 2015: join on NTA code (e.g. "BX31") — direct match
         merged = gdf_boundaries.merge(df15, on="nta_code", how="left")
@@ -310,11 +319,13 @@ if LIVE_DATA:
         # Census TIGER land area excludes water and is already measured in m².
         merged["area_km2"] = (merged["aland_m2"] / 1e6).round(2).clip(lower=0.1)
 
-        print("📡 Fetching 2011–2015 ACS household income…")
-        income_by_nta = _aggregate_income_to_nta(_fetch_acs_2015_income(), xwalk)
+        print("📡 Fetching current ACS five-year household income…")
+        acs_income=_fetch_acs_income()
+        income_by_nta = _aggregate_income_to_nta(acs_income, current_xwalk)
         merged = merged.merge(income_by_nta, on="nta_code", how="left")
         merged["income_estimated"] = True
-        merged["income_source"] = "ACS 2011–2015 B19013; household-weighted tract approximation"
+        merged["income_source_year"] = int(acs_income["income_source_year"].max())
+        merged["income_source"] = "ACS five-year B19013 via Census Reporter; household-weighted tract approximation"
 
         # Centroid lat/lon for circle markers
         cents = merged.to_crs("EPSG:2263").geometry.centroid.to_crs("EPSG:4326")
@@ -547,7 +558,8 @@ merged["pct_change"]   = ((merged["tree_change"] / merged["trees_2005"].replace(
 merged["data_mode"] = merged.get("data_mode", "official")
 merged["generated_at"] = datetime.now(timezone.utc).isoformat()
 merged["tree_source_year"] = 2015
-merged["income_source_year"] = 2015
+if "income_source_year" not in merged:
+    merged["income_source_year"] = np.nan
 
 # Parks, airports, cemeteries, and other near-zero-household planning areas
 # remain visible for context but never compete in community investment rankings.

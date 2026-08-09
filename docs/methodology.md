@@ -12,7 +12,7 @@ Tree counts come from the NYC Parks 2005 and 2015 Street Tree Censuses. Density 
 
 ## Income
 
-Income should come from the 2011–2015 American Community Survey five-year estimate (table B19013) to match the 2015 tree snapshot. Census-tract estimates are converted to 2010 NTAs and must include the ACS vintage, aggregation method, coverage, and margin-of-error limitation. Median values are not additive; an NTA estimate derived from tract medians is an approximation.
+Income comes from the latest American Community Survey five-year estimate (table B19013), accessed through Census Reporter. Current census tracts are assigned to 2010 NTAs by representative-point spatial crosswalk, then tract medians are household-weighted. The interface keeps the ACS vintage separate from the 2015 tree year. Median values are not additive, so the result is an approximation rather than an official NTA median.
 
 ## Air quality
 
