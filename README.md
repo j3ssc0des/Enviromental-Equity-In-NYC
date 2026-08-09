@@ -13,6 +13,7 @@ An expanding, source-transparent atlas of New York City environmental conditions
 - A clearly labeled tree-and-income heat proxy
 - A compact map-first interface with expandable neighborhood details
 - A persistent interpretation sidebar with source-bound neighborhood narratives
+- An optional server-side, source-grounded AI interpretation with a calculation-based fallback
 - A validated GeoJSON snapshot used by the map, rankings, findings, and localhost preview
 
 Street trees are not total canopy. The proxy is not measured temperature or NYC's official Heat Vulnerability Index. Read [methodology](docs/methodology.md) before interpreting results.
@@ -23,7 +24,7 @@ Airports, parks, cemeteries, islands, correctional facilities, and other areas w
 
 The [data catalog](docs/data-catalog.md) tracks official heat, flooding, canopy, air, pollution, water, health, and community-vulnerability sources. A dataset is promoted only after its native geography, uncertainty, transformation, missingness behavior, and update cadence are documented and tested.
 
-The interpretation sidebar is ready for a server-side AI explanation layer. Any model must receive only validated atlas records and source metadata, cite the values and years it discusses, distinguish observed measures from project proxies, and fall back to the current calculation-backed narrative when the service is unavailable. API keys must never be placed in the GitHub Pages client.
+The interpretation sidebar supports a server-side AI explanation layer. The browser sends only an NTA code and metric; the server reloads validated atlas records, supplies source metadata, and returns qualitative prose beside deterministic values and citations. If the endpoint is missing, slow, invalid, or unavailable, the current calculation-backed narrative remains visible. API keys never enter the GitHub Pages client. See [AI analysis architecture and deployment](docs/ai-analysis.md).
 
 ## Reliability
 
@@ -43,6 +44,7 @@ pip install -r requirements.txt
 python .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
 python nyc_trees_analysis.py
 python scripts/validate_build.py
+npm test
 python3 -m http.server 8000
 ```
 

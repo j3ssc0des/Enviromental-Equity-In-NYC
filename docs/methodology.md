@@ -32,6 +32,8 @@ Any combined score is project-defined. It must expose its component values and w
 
 Mapped associations do not prove that income caused tree coverage, that trees caused local air quality, or that observed differences reflect a specific investment history. Narrative text uses “associated with” language unless a cited study supports a causal statement.
 
+When the optional AI endpoint is configured, the browser sends only the selected NTA code and metric. The server independently reloads the validated snapshot and computes all evidence and source links. The model writes only a short qualitative interpretation and is prohibited from emitting figures, URLs, causal claims, or funding recommendations. Exact values and source years remain deterministic interface elements. Invalid model output, timeout, missing configuration, or any endpoint error restores the calculation-based narrative without hiding the neighborhood data. See [AI analysis architecture](ai-analysis.md).
+
 ## Community investment eligibility
 
 Airports, parks, cemeteries, islands, correctional facilities, and other planning areas with fewer than 100 ACS households remain visible as geographic context. They are labeled non-residential and excluded from community screening scores, heat-proxy rankings, priority markers, and borough investment comparisons. This prevents land-intensive infrastructure areas from displacing residential communities in rankings.
