@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit NYC Environmental Data"
+  short_description: "Check source freshness, quality, and schema drift"
+  default_prompt: "Use $audit-nyc-environment-data to audit every environmental dataset before rebuilding the site."

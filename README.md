@@ -1,35 +1,49 @@
-# 🌳 Environmental Equity in NYC
+# NYC Environmental Atlas
 
-[![Live Site](https://img.shields.io/badge/Live%20Site-View%20Map-2fa05e?style=for-the-badge)](https://j3ssc0des.github.io/Enviromental-Equity-In-NYC)
-[![Data](https://img.shields.io/badge/Data-NYC%20Open%20Data-blue?style=for-the-badge)](https://opendata.cityofnewyork.us)
+[View the deployed site](https://j3ssc0des.github.io/Enviromental-Equity-In-NYC)
 
-An interactive map exploring green space inequity across NYC neighborhoods using the 2005 & 2015 Street Tree Census — analyzing the relationship between tree density, household income, and urban heat vulnerability.
+An expanding, source-transparent atlas of New York City environmental conditions. The first module compares the 2005 and 2015 NYC Street Tree Censuses with a 2011–2015 ACS income approximation at 2010 Neighborhood Tabulation Area geography.
 
-## 🗺 [View the Live Map →](https://j3ssc0des.github.io/Enviromental-Equity-In-NYC)
+## Current module
 
-## About
+- Street-tree counts and density
+- Historical tree-count change
+- ACS household-income context with coverage metadata
+- A clearly labeled project screening score
+- A clearly labeled tree-and-income heat proxy
+- A compact map-first interface with expandable neighborhood details
 
-Every decade, NYC Parks counts every street tree in the city. The data tells a story that goes beyond parks and sidewalks such as neighborhoods with fewer trees are hotter in summer, have worse air quality, and tend to have lower median incomes.
+Street trees are not total canopy. The proxy is not measured temperature or NYC's official Heat Vulnerability Index. Read [methodology](docs/methodology.md) before interpreting results.
 
-This project analyzes two census snapshots (2005 and 2015) to quantify that inequity at the neighborhood level. Using an underserved index that weights both tree density and household income, it identifies the neighborhoods most in need of green infrastructure investment, from Hunts Point and Mott Haven in the Bronx to East New York and Brownsville in Brooklyn. The 2025 census is currently underway and this map will be updated when results are published.
+Airports, parks, cemeteries, islands, correctional facilities, and other areas with fewer than 100 ACS households remain visible for geographic context but are excluded from residential investment rankings, priority markers, and heat-proxy comparisons.
 
-## Map Layers
+## Roadmap
 
-| Layer | Description |
-|---|---|
-| 🌳 Tree Density | Trees per km² by neighborhood (2015) |
-| 💵 Median Income | Household income by neighborhood |
-| 🔴 Underserved Index | Low density + low income combined score |
-| 📈 Canopy Change | Tree count change from 2005 to 2015 |
-| 🌡 Heat Vulnerability | Estimated urban heat risk |
+The [data catalog](docs/data-catalog.md) tracks official heat, flooding, canopy, air, pollution, water, health, and community-vulnerability sources. A dataset is promoted only after its native geography, uncertainty, transformation, missingness behavior, and update cadence are documented and tested.
 
-## Data Sources
+## Reliability
 
-- [NYC Street Tree Census 2015](https://data.cityofnewyork.us/resource/uvpi-gqnh)
-- [NYC Street Tree Census 2005](https://data.cityofnewyork.us/resource/29bw-z7pj)
-- [NYC Neighborhood Tabulation Areas (2010)](https://data.cityofnewyork.us/City-Government/2010-Census-Tract-to-Neighborhood-Tabulation-Area-/8ius-dhrr)
-- [US Census TIGER/Line Cartographic Boundaries (2010)](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html)
+- `data/sources.json` is the source registry.
+- The project data-audit skill checks availability and schema drift.
+- Pull requests build from official sources and validate output without deploying.
+- `main` deploys to GitHub Pages only after rebuilding and validating.
+- A weekly scheduled build detects upstream changes.
+- Demo fallback is forbidden in CI and deployment.
 
-## Built With
+## Local build
 
-Python · Pandas · GeoPandas · Folium · GitHub Pages · GitHub Actions
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
+python nyc_trees_analysis.py
+python scripts/validate_build.py
+```
+
+## Primary sources
+
+- [NYC Street Tree Census 2015](https://data.cityofnewyork.us/d/uvpi-gqnh)
+- [NYC Street Tree Census 2005](https://data.cityofnewyork.us/d/29bw-z7pj)
+- [2010 tract-to-NTA crosswalk](https://data.cityofnewyork.us/d/8ius-dhrr)
+- [US Census ACS API](https://api.census.gov/data/2015/acs/acs5.html)

@@ -32,9 +32,9 @@ Show less
 
 # Python
 venv/
+.venv/
 __pycache__/
 *.pyc
-
 
 
 

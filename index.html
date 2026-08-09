@@ -49,10 +49,9 @@
       letter-spacing: 0.14em; color: var(--green);
       white-space: nowrap; flex-shrink: 0; text-decoration: none;
     }
-    .brand-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--green); box-shadow: 0 0 6px rgba(47,160,94,0.7); flex-shrink: 0;
-    }
+    .brand-mark { width:30px; height:30px; flex-shrink:0; filter:drop-shadow(0 0 7px rgba(47,160,94,.28)); }
+    .brand-copy { display:flex; flex-direction:column; line-height:1.05; }
+    .brand-copy small { color:#fff; font-size:.52rem; letter-spacing:.08em; margin-top:3px; }
     .nav-tabs { display: flex; gap: 4px; }
     .nav-tab {
       font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em;
@@ -78,13 +77,20 @@
       content: ''; width: 5px; height: 5px; border-radius: 50%;
       background: var(--green); animation: pulse 2.2s ease-in-out infinite;
     }
+    .catalog { max-width:1000px; margin:0 auto 1.25rem; padding:0 1.5rem; }
+    .catalog-grid { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin; }
+    .domain-card { background:var(--surface); border:1px solid var(--border); border-radius:99px; padding:7px 11px; min-height:0; white-space:nowrap; display:flex; gap:7px; align-items:center; }
+    .domain-card.active { border-color:var(--green-border); background:linear-gradient(145deg,rgba(47,160,94,.12),var(--surface)); }
+    .domain-title { color:#fff; font-size:.7rem; font-weight:600; margin:0; }
+    .domain-status { color:var(--muted); font-family:var(--mono); font-size:.52rem; letter-spacing:.08em; text-transform:uppercase; }
+    .domain-card.active .domain-status { color:var(--green-bright); }
     @keyframes pulse {
       0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(47,160,94,0.5); }
       50%      { opacity:0.6; box-shadow:0 0 0 5px rgba(47,160,94,0); }
     }
 
     /* ── HERO ──────────────────────────────────────────────── */
-    .hero { padding: 3.5rem 1.5rem 2rem; max-width: 760px; margin: 0 auto; text-align: center; }
+    .hero { padding: 2.4rem 1.5rem 1.35rem; max-width: 760px; margin: 0 auto; text-align: center; }
     .eyebrow {
       display: inline-block; font-family: var(--mono); font-size: 0.7rem;
       letter-spacing: 0.12em; text-transform: uppercase;
@@ -417,61 +423,40 @@
   <!-- NAV ───────────────────────────────────────────────────── -->
   <nav>
     <a class="nav-brand" href="#">
-      <div class="brand-dot"></div>
-      🌳 NYC GREEN SPACE
+      <img class="brand-mark" src="assets/nyc-environment-mark.svg" alt="" />
+      <span class="brand-copy">NYC ENVIRONMENTAL <small>ATLAS</small></span>
     </a>
     <div class="nav-tabs">
-      <button class="nav-tab active" data-tab="geomap">🗺 GEO MAP</button>
-      <button class="nav-tab" data-tab="borough">📊 BOROUGH STATS</button>
-      <button class="nav-tab" data-tab="heat">🌡 HEAT INDEX</button>
+      <button class="nav-tab active" data-tab="geomap">MAP</button>
+      <button class="nav-tab" data-tab="borough">BOROUGH VIEW</button>
+      <button class="nav-tab" data-tab="heat">HEAT PROXY</button>
     </div>
     <div class="nav-right">
-      <span class="live-badge">LIVE</span>
-      <span>NYC Open Data</span>
+      <span class="live-badge">VERIFIED BUILD</span>
+      <span>2015 baseline</span>
     </div>
   </nav>
 
   <!-- HERO ──────────────────────────────────────────────────── -->
   <section class="hero">
-    <div class="eyebrow">NYC Street Tree Census &nbsp;·&nbsp; 2005 &amp; 2015</div>
-    <h1>Does your neighborhood<br>get its fair share of <em>trees</em>?</h1>
+    <div class="eyebrow">NYC environmental data &nbsp;·&nbsp; neighborhood context</div>
+    <h1>See the environment shaping<br><em>every NYC neighborhood.</em></h1>
     <p>
-      NYC counts every street tree every decade. The numbers reveal a pattern:
-      lower-income neighborhoods consistently have fewer trees. That gap
-      means hotter streets, worse air, and compounding disadvantage.
-      Explore the interactive map below to see how your neighborhood stacks up.
+      Explore sourced neighborhood data, starting with NYC street trees and income context.
     </p>
   </section>
 
-  <!-- STATS BAR ─────────────────────────────────────────────── -->
-  <div class="stats-bar">
-    <div class="stat"><div class="stat-number">666,134</div><div class="stat-label">Trees counted in 2015</div></div>
-    <div class="stat"><div class="stat-number">195</div><div class="stat-label">Neighborhoods analyzed</div></div>
-    <div class="stat"><div class="stat-number">5</div><div class="stat-label">Boroughs compared</div></div>
-  </div>
-
-  <!-- HOW TO USE ────────────────────────────────────────────── -->
-  <div class="how-to">
-    <div class="section-label">How to use the map</div>
-    <div class="tips-grid">
-      <div class="tip">
-        <div class="tip-icon">👆</div>
-        <p>Click any neighborhood on the map to see its full breakdown on the right, including tree count, income, air quality, and how it compares to the rest of NYC</p>
-      </div>
-      <div class="tip">
-        <div class="tip-icon">🗂</div>
-        <p>Switch map layers using the panel inside the map. Each layer highlights a different inequality: tree coverage, household income, heat risk, or air quality</p>
-      </div>
-      <div class="tip">
-        <div class="tip-icon">🔴</div>
-        <p>Orange dots mark the 15 most underserved neighborhoods, where low tree cover, low income, and poor air quality overlap the most</p>
-      </div>
-      <div class="tip">
-        <div class="tip-icon">📊</div>
-        <p>Use Borough Stats and Heat Index tabs at the top to see how the five boroughs compare and which neighborhoods face the highest environmental risk</p>
-      </div>
+  <section class="catalog" aria-labelledby="catalog-title">
+    <div class="section-label" id="catalog-title">Data layers</div>
+    <div class="catalog-grid">
+      <div class="domain-card active"><div class="domain-title">Green space</div><div class="domain-status">Available</div></div>
+      <div class="domain-card"><div class="domain-title">Heat</div><div class="domain-status">Next</div></div>
+      <div class="domain-card"><div class="domain-title">Flooding</div><div class="domain-status">Next</div></div>
+      <div class="domain-card"><div class="domain-title">Air</div><div class="domain-status">Planned</div></div>
+      <div class="domain-card"><div class="domain-title">Pollution</div><div class="domain-status">Planned</div></div>
+      <div class="domain-card"><div class="domain-title">Health</div><div class="domain-status">Planned</div></div>
     </div>
-  </div>
+  </section>
 
   <!-- ① GEO MAP TAB ────────────────────────────────────────── -->
   <div id="tab-geomap" class="tab-view active">
@@ -487,7 +472,6 @@
             <button class="mtab active" data-tab="trees">TREES</button>
             <button class="mtab" data-tab="income">INCOME</button>
             <button class="mtab" data-tab="heat">HEAT</button>
-            <button class="mtab" data-tab="air">AIR</button>
             <button class="mtab" data-tab="equity">EQUITY</button>
           </div>
         </div>
@@ -509,11 +493,11 @@
             <!-- Underserved score bar (always visible) -->
             <div class="score-section">
               <div class="score-header">
-                <span class="score-title">Underserved index</span>
+                <span class="score-title">Project screening score</span>
                 <span class="score-num" id="tp-score-num"></span>
               </div>
               <div class="score-track"><div class="score-fill" id="tp-score-fill"></div></div>
-              <div class="score-ends"><span>WELL-SERVED</span><span>CRITICAL</span></div>
+              <div class="score-ends"><span>LOWER PRIORITY</span><span>HIGHER PRIORITY</span></div>
             </div>
 
             <!-- Plain English summary (always visible) -->
@@ -595,13 +579,13 @@
                   <div class="sec-val neutral">8.5 μg/m³</div>
                 </div>
                 <div class="sec-box">
-                  <div class="sec-label">VS Safe Limit</div>
+                  <div class="sec-label">Reference comparison</div>
                   <div class="sec-val" id="tp-air-vs-safe"></div>
                 </div>
               </div>
               <div class="cmp-section">
                 <div class="cmp-label-row">
-                  <span class="cmp-label">PM2.5 vs safe threshold (8.0 μg/m³)</span>
+                  <span class="cmp-label">PM2.5 reference comparison</span>
                 </div>
                 <div class="cmp-track" style="height:10px;overflow:hidden">
                   <div class="cmp-fill" id="tp-air-fill"></div>
@@ -633,7 +617,7 @@
             <div class="tab-panel" id="tp-equity">
               <div class="hero-stat">
                 <div class="hero-num" id="tp-score-big"></div>
-                <div class="hero-label">Underserved index (0 = well-served, 1 = critical)</div>
+                <div class="hero-label">Project screening score · trees 55% + income 45%</div>
               </div>
               <div id="tp-equity-bench"></div>
             </div>
@@ -642,7 +626,7 @@
             <div class="tab-panel" id="tp-heat">
               <div class="hero-stat">
                 <div class="heat-hero-num" id="tp-heat-val"></div>
-                <div class="hero-label">Heat vulnerability score</div>
+                <div class="hero-label">Tree-and-income heat proxy · not observed temperature</div>
               </div>
               <div id="tp-heat-badge" class="avg-compare" style="margin-bottom:12px"></div>
               <div class="heat-explain" id="tp-heat-explain"></div>
@@ -710,8 +694,8 @@
   <div id="tab-heat" class="tab-view">
     <div class="tabview-inner">
       <div class="tv-header">
-        <div class="tv-title">Urban Heat Vulnerability — Top 20 Neighborhoods</div>
-        <div class="tv-sub">Ranked by combined heat proxy score (low tree density + low income = higher heat risk)</div>
+        <div class="tv-title">Tree-and-Income Heat Proxy — Top 20 Neighborhoods</div>
+        <div class="tv-sub">A project proxy, not NYC's official Heat Vulnerability Index or measured temperature</div>
       </div>
       <div id="heat-loading" class="loading-msg">Loading data from map...</div>
       <div id="heat-content" style="display:none">
@@ -726,19 +710,19 @@
     <div class="findings-grid">
       <div class="finding">
         <div class="finding-tag">Inequality</div>
-        <p>South Bronx neighborhoods like Hunts Point average just <span class="alert">600 trees per square mile</span>, while Staten Island's suburbs top 1,290 — more than twice as dense, with incomes to match.</p>
+        <p>Street-tree density varies substantially across NTAs. Use the map values—not a hard-coded narrative—to compare neighborhoods in trees per square kilometer.</p>
       </div>
       <div class="finding">
         <div class="finding-tag">Income gap</div>
-        <p>Bronx neighborhoods with median incomes under $30,000 — Mott Haven, Hunts Point, Longwood — <span class="warn">all rank in the bottom fifth</span> of citywide tree density, while wealthier residential areas consistently lead.</p>
+        <p>Income and tree density can be compared as an association. The map does not infer causes or reconstruct public-investment history.</p>
       </div>
       <div class="finding">
         <div class="finding-tag">Progress, but uneven</div>
-        <p>Every borough added trees from 2005 to 2015. <span class="hi">Staten Island led at +25%</span>, followed by the Bronx at +22% — yet Bronx communities that need greenery most remain near the bottom of city rankings.</p>
+        <p>The 2005–2015 layer provides a historical comparison. Boundary and census-method limitations are documented alongside the data.</p>
       </div>
       <div class="finding">
         <div class="finding-tag">Heat and health</div>
-        <p>Neighborhoods with the fewest trees also score highest on urban heat vulnerability, bringing <span class="alert">hotter summers</span> on top of lower incomes and fewer resources.</p>
+        <p>The current heat view is explicitly a tree-and-income proxy. Official NYC HVI will be added as a separate, sourced dataset.</p>
       </div>
     </div>
   </div>
@@ -763,7 +747,7 @@
         <div class="footer-credit">Built with Python, GeoPandas &amp; Folium. Deployed via GitHub Pages.</div>
       </div>
       <div class="footer-note">
-        Based on 2015 NYC Street Tree Census data. The 2025 census is currently underway — this map will be updated when results are published.
+        Data snapshot rebuilt from declared public sources. See <a href="docs/methodology.md">methodology</a> and <a href="docs/data-catalog.md">data catalog</a>. Scheduled checks detect upstream schema changes; source year is shown per metric.
       </div>
     </div>
   </footer>
@@ -778,16 +762,17 @@ let heatBuilt    = false;
 const BENCHMARK = {
   nta_name:'NYC Healthy Benchmark', _isBenchmark:true,
   density_2015:1000, median_income:63000, underserved:0.30,
-  heat_proxy:0.40, pm25:8.0, tree_change:1, equity_label:'Well-Served', boro_name:'',
+  heat_proxy:0.40, pm25:null, tree_change:1, equity_label:'Lower Priority', boro_name:'',
 };
 
 /* ── EQUITY CONFIG ─────────────────────────────────────────── */
 const EQ = {
-  'Well-Served':     { bg:'rgba(47,160,94,0.12)',  border:'#2fa05e', text:'#2fa05e' },
-  'Adequate':        { bg:'rgba(168,230,191,0.12)',border:'#a8e6bf', text:'#a8e6bf' },
-  'Needs Attention': { bg:'rgba(245,184,0,0.12)',  border:'#f5b800', text:'#f5b800' },
-  'Underserved':     { bg:'rgba(217,79,0,0.12)',   border:'#d94f00', text:'#d94f00' },
-  'Critical':        { bg:'rgba(109,0,0,0.15)',    border:'#c0392b', text:'#c0392b' },
+  'Lower Priority':  { bg:'rgba(47,160,94,0.12)',  border:'#2fa05e', text:'#2fa05e' },
+  'Below Average':   { bg:'rgba(168,230,191,0.12)',border:'#a8e6bf', text:'#a8e6bf' },
+  'Middle':          { bg:'rgba(245,184,0,0.12)',  border:'#f5b800', text:'#f5b800' },
+  'Above Average':   { bg:'rgba(217,79,0,0.12)',   border:'#d94f00', text:'#d94f00' },
+  'Higher Priority': { bg:'rgba(109,0,0,0.15)',    border:'#c0392b', text:'#c0392b' },
+  'Insufficient Data':{bg:'rgba(255,255,255,0.08)',border:'#64706a', text:'#9aa59f' },
 };
 
 function scoreToColor(v) {
@@ -807,7 +792,7 @@ function heatColor(v) {
 }
 
 function heatLabel(v) {
-  if (v >= 0.75) return { text:'CRITICAL', bg:'rgba(109,0,0,0.2)',   border:'#c0392b', text2:'#c0392b' };
+  if (v >= 0.75) return { text:'HIGHER PROXY', bg:'rgba(109,0,0,0.2)', border:'#c0392b', text2:'#c0392b' };
   if (v >= 0.55) return { text:'HIGH',     bg:'rgba(217,79,0,0.15)', border:'#d94f00', text2:'#d94f00' };
   if (v >= 0.35) return { text:'MODERATE', bg:'rgba(245,184,0,0.12)',border:'#f5b800', text2:'#f5b800' };
   return               { text:'LOW',       bg:'rgba(47,160,94,0.12)',border:'#2fa05e', text2:'#2fa05e' };
@@ -818,16 +803,18 @@ function makeSummary(p) {
   const density = Math.round(parseFloat(p.density_2015)||0);
   const income  = parseInt(p.median_income)||0;
   const change  = parseInt(p.tree_change)||0;
-  const label   = p.equity_label||'Adequate';
+  const label   = p.equity_label||'Middle';
+  if (p.investment_eligible === false)
+    return `${name} is a non-residential planning area shown for geographic context. It is excluded from community investment, heat-proxy, and screening-score rankings.`;
   const cStr    = change >= 0 ? `gained ${change.toLocaleString()} trees` : `lost ${Math.abs(change).toLocaleString()} trees`;
-  if (label==='Critical')
+  if (label==='Higher Priority')
     return `${name} is among NYC's most underserved neighborhoods for green space. With only ${density} trees per km² and a median income of $${income.toLocaleString()}, it faces the sharpest need for street-tree investment.`;
-  if (label==='Underserved')
+  if (label==='Above Average')
     return `${name} falls well below the city average. At ${density} trees per km², it ${cStr} between 2005 and 2015. The gap with wealthier areas remains large.`;
-  if (label==='Needs Attention')
+  if (label==='Middle')
     return `${name} sits below the citywide average at ${density} trees per km². It ${cStr} since 2005. Targeted planting could meaningfully improve conditions here.`;
-  if (label==='Well-Served')
-    return `${name} is among NYC's greener neighborhoods at ${density} trees per km². It ${cStr} since 2005, reflecting consistent investment in street-tree canopy.`;
+  if (label==='Lower Priority')
+    return `${name} is among the higher-density street-tree neighborhoods at ${density} trees per km². It ${cStr} since 2005.`;
   return `${name} has average tree coverage at ${density} trees per km² and ${cStr} between 2005 and 2015.`;
 }
 
@@ -895,7 +882,7 @@ function updatePanel(p) {
   // Income rank: use sorted ntaData if available, else estimate
   let rankPct = income / 200000; // fallback estimate
   if (ntaData.length > 1) {
-    const sorted = ntaData.map(d => parseInt(d.median_income)||0).sort((a,b)=>a-b);
+    const sorted = ntaData.filter(d => d.investment_eligible !== false).map(d => parseInt(d.median_income)||0).sort((a,b)=>a-b);
     const rank = sorted.findIndex(v => v >= income);
     rankPct = rank < 0 ? 1 : rank / sorted.length;
     const rankNum = sorted.length - (rank < 0 ? sorted.length : rank);
@@ -908,7 +895,7 @@ function updatePanel(p) {
   document.getElementById('tp-income-note').textContent =
     aboveAvg
       ? `${p.nta_name} has a higher-than-average income and tends to have better green space access.`
-      : `${p.nta_name}'s income is below the NYC median of $63,000 — lower-income neighborhoods consistently receive less investment in street trees.`;
+      : `${p.nta_name}'s estimated income is below the comparison median. Tree density is shown separately; this site does not infer an investment cause.`;
 
   // ── EQUITY PANEL ──────────────────────────────────────────
   document.getElementById('tp-score-big').textContent = score.toFixed(3);
@@ -931,10 +918,10 @@ function updatePanel(p) {
     heat >= 0.75
       ? `${p.nta_name} is among the highest heat-risk neighborhoods in NYC. With only ${dens.toFixed(0)} trees per km², there is very little shade to reduce surface temperatures during summer heat events.`
       : heat >= 0.55
-      ? `${p.nta_name} has elevated heat vulnerability. Lower tree density means less shade and higher surface temperatures compared to better-canopied neighborhoods.`
+      ? `${p.nta_name} has an elevated tree-and-income proxy. It is not measured temperature or official HVI.`
       : heat >= 0.35
-      ? `${p.nta_name} has moderate heat vulnerability. Increasing tree cover would meaningfully reduce local temperatures and improve comfort during hot weather.`
-      : `${p.nta_name} has relatively low heat vulnerability, with enough tree canopy to provide meaningful shade and cooling.`;
+      ? `${p.nta_name} has a moderate tree-and-income proxy. Consult official HVI and temperature data before drawing conclusions.`
+      : `${p.nta_name} has a relatively low tree-and-income proxy; this is not a heat-risk determination.`;
 
   // Borough average heat
   if (ntaData.length > 1) {
@@ -963,7 +950,7 @@ function updatePanel(p) {
     const estimated = !!p.pm25_estimated;
 
     // Status label + color
-    const airLabel = pm25 < 8.0 ? '🟢 CLEAN' : pm25 < 10.0 ? '🟡 MODERATE' : pm25 < 12.0 ? '🟠 POOR' : '🔴 HAZARDOUS';
+    const airLabel = pm25 > 0 ? 'MODELED ESTIMATE' : 'NTA CROSSWALK PENDING';
     const airBg    = pm25 < 8.0 ? 'rgba(47,160,94,0.12)'  : pm25 < 10.0 ? 'rgba(245,184,0,0.12)'  : 'rgba(217,79,0,0.12)';
     const airBor   = pm25 < 8.0 ? 'rgba(47,160,94,0.35)'  : pm25 < 10.0 ? 'rgba(245,184,0,0.35)'  : 'rgba(217,79,0,0.4)';
     const airTxt   = pm25 < 8.0 ? '#2fa05e'                : pm25 < 10.0 ? '#f5b800'                : '#d94f00';
@@ -1014,7 +1001,7 @@ function updatePanel(p) {
     const noteEl = document.getElementById('tp-air-note');
     if (noteEl) {
       const absDiff = Math.abs(pm25 - PM25_SAFE).toFixed(1);
-      noteEl.textContent  = pm25 <= PM25_SAFE ? `${absDiff} μg/m³ below safe limit` : `${absDiff} μg/m³ above safe limit`;
+      noteEl.textContent  = pm25 > 0 ? `${absDiff} μg/m³ from reference value` : 'Not available at NTA geography';
       noteEl.className    = 'cmp-note ' + (pm25 <= PM25_SAFE ? 'pos' : 'neg');
     }
 
@@ -1030,7 +1017,7 @@ function updatePanel(p) {
       const lowTrees  = dens < NYC_AVG_DENSITY;
       const highPm25  = pm25 > NYC_AVG_PM25;
       if (lowTrees && highPm25)
-        insightEl.textContent = 'This neighborhood has below average tree cover and above average pollution. Urban trees can reduce PM2.5 by up to 24%. This area would benefit most from targeted tree planting.';
+        insightEl.textContent = 'Tree density and air pollution are separate indicators. This atlas does not make a causal attribution.';
       else if (!lowTrees && !highPm25)
         insightEl.textContent = 'Strong tree canopy here likely contributes to cleaner air. Trees act as natural filters for fine particle pollution.';
       else if (!lowTrees && highPm25)
@@ -1104,7 +1091,7 @@ function benchRating(val, target, better) {
 function buildBenchmarkPanel(p) {
   const bench = document.getElementById('tp-equity-bench');
   if (!bench) return;
-  const eqA = EQ[p.equity_label] || EQ['Adequate'];
+  const eqA = EQ[p.equity_label] || EQ['Middle'];
   const metrics = [
     { label:'Tree Density',      bFmt:'≥ 1,000/km²', bTarget:1000,  better:'higher',
       aVal:parseFloat(p.density_2015)||0, fmt: v => Math.round(v).toLocaleString()+'/km²' },
@@ -1147,7 +1134,7 @@ function buildBenchmarkPanel(p) {
   if (pm25A > 8.5)   parts.push(`PM2.5 is ${Math.round(((pm25A-8.0)/8.0)*100)}% above the clean air benchmark`);
   const gapText = parts.length
     ? `${nameA} is ${parts.length === 1 ? parts[0] : parts.slice(0,-1).join(', ')+', and '+parts[parts.length-1]}. It currently meets <b>${scoreA} of ${total}</b> healthy neighborhood benchmarks.`
-    : `${nameA} is well-served and meets <b>${scoreA} of ${total}</b> healthy neighborhood benchmarks.`;
+    : `${nameA} meets <b>${scoreA} of ${total}</b> project comparison points. These are not health or regulatory standards.`;
 
   bench.innerHTML = `
     <div class="ct-grid-hdr">
@@ -1175,7 +1162,7 @@ function buildBoroughStats() {
 
   // Aggregate by borough
   const agg = {};
-  ntaData.forEach(function(d) {
+  ntaData.filter(d => d.investment_eligible !== false).forEach(function(d) {
     const b = d.boro_name || d.borough || 'Unknown';
     if (!agg[b]) agg[b] = { trees:0, density:[], income:[], underserved:0, ntaCount:0 };
     agg[b].trees   += parseInt(d.trees_2015)||0;
@@ -1245,7 +1232,7 @@ function buildHeatIndex() {
   heatBuilt = true;
 
   const sorted = ntaData
-    .filter(d => d.heat_proxy != null)
+    .filter(d => d.heat_proxy != null && d.investment_eligible !== false)
     .map(d => ({ ...d, _heat: parseFloat(d.heat_proxy)||0 }))
     .sort((a,b) => b._heat - a._heat)
     .slice(0, 20);
