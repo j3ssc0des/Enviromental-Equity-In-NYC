@@ -286,8 +286,12 @@ if LIVE_DATA:
 
         gdf_with_nta = gdf_tracts.merge(xwalk, on=["TRACT","COUNTY"], how="left")
         gdf_with_nta = gdf_with_nta.dropna(subset=["nta_code"])
-        gdf_with_nta["aland_m2"] = pd.to_numeric(gdf_with_nta["ALAND"], errors="coerce")
-        nta_land = gdf_with_nta.groupby("nta_code", as_index=False)["aland_m2"].sum(min_count=1)
+        if "CENSUSAREA" not in gdf_with_nta.columns:
+            raise ValueError("2010 tract boundaries are missing required CENSUSAREA land-area field")
+        gdf_with_nta["land_km2"] = pd.to_numeric(
+            gdf_with_nta["CENSUSAREA"], errors="coerce"
+        ) * 2.589988110336
+        nta_land = gdf_with_nta.groupby("nta_code", as_index=False)["land_km2"].sum(min_count=1)
         gdf_boundaries = gdf_with_nta.dissolve(by="nta_code", aggfunc="first").reset_index()
         gdf_boundaries = gdf_boundaries.merge(nta_land, on="nta_code", how="left")
         gdf_boundaries = gdf_boundaries.set_crs("EPSG:4326", allow_override=True)
@@ -317,7 +321,7 @@ if LIVE_DATA:
         merged["trees_2005"] = merged["trees_2005"].fillna(0).astype(int)
 
         # Census TIGER land area excludes water and is already measured in m².
-        merged["area_km2"] = (merged["aland_m2"] / 1e6).round(2).clip(lower=0.1)
+        merged["area_km2"] = merged["land_km2"].round(2).clip(lower=0.1)
 
         print("📡 Fetching current ACS five-year household income…")
         acs_income=_fetch_acs_income()
