@@ -5,6 +5,6 @@
   {"id":"c3uy-2p5r","name":"Environment and Health indicators","kind":"socrata","required_fields":["name","geo_type_name","data_value","time_period"],"status":"catalogued"},
   {"id":"4mhf-duep","name":"Heat Vulnerability Index Rankings","kind":"socrata","required_fields":["zcta20","hvi"],"status":"next"},
   {"id":"mrjc-v9pm","name":"NYC Flood Vulnerability Index","kind":"socrata","required_fields":["geoid"],"status":"next"},
-  {"id":"by9k-vhck","name":"Tree Canopy Change 2010–2017","kind":"socrata","required_fields":[],"status":"next"},
-  {"id":"census-reporter-acs5","name":"Current ACS five-year income","kind":"census_reporter","required_fields":["B19013001","B11001001"],"status":"active"}
+  {"id":"by9k-vhck","name":"Retired canopy-change candidate (unavailable)","kind":"socrata","required_fields":[],"reference_year":2017,"status":"retired"},
+  {"id":"census-reporter-acs5","name":"Latest ACS five-year income","kind":"census_reporter","required_fields":["B19013001","B11001001"],"reference_year":2024,"max_reference_lag_years":2,"update_cadence":"annual","status":"active"}
 ]

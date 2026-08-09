@@ -10,9 +10,11 @@ The current map uses 2010 Neighborhood Tabulation Areas (NTAs) because the 2005 
 
 Tree counts come from the NYC Parks 2005 and 2015 Street Tree Censuses. Density is count divided by land area, not total polygon area. Street-tree counts do not represent park trees, private trees, forest, wetlands, or total canopy.
 
+The official 2005 file contains 592,372 records with a non-null NTA field, but 24,027 of those records contain only a blank code. The project maps 568,345 records to valid NTAs, or 95.9% coverage. Blank-code records are excluded from neighborhood change rather than guessed into a geography. The generated snapshot publishes both the unassigned count and mapping coverage.
+
 ## Income
 
-Income comes from the latest American Community Survey five-year estimate (table B19013), accessed through Census Reporter. Current census tracts are assigned to 2010 NTAs by representative-point spatial crosswalk, then tract medians are household-weighted. The interface keeps the ACS vintage separate from the 2015 tree year. Median values are not additive, so the result is an approximation rather than an official NTA median.
+Income comes from the latest American Community Survey five-year estimate (tables B19013 and B11001), accessed through Census Reporter. The deployed release is 2020–2024. Current census tracts are assigned to 2010 NTAs by representative-point spatial crosswalk, then tract medians are household-weighted. The interface keeps the ACS vintage separate from the 2015 tree year. Median values are not additive, so the result is an approximation rather than an official NTA median.
 
 ## Air quality
 
