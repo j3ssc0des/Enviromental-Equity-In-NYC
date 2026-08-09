@@ -211,23 +211,28 @@ def _aggregate_income_to_nta(acs, crosswalk):
     joined = crosswalk[["COUNTY", "TRACT", "nta_code"]].drop_duplicates().merge(
         acs, on=["COUNTY", "TRACT"], how="left"
     )
-    def summarize(group):
+    summaries=[]
+    for nta_code,group in joined.dropna(subset=["nta_code"]).groupby("nta_code"):
         valid = group.dropna(subset=["tract_income", "households"])
         total_households = group["households"].sum(min_count=1)
         covered_households = valid["households"].sum(min_count=1)
         if valid.empty or not covered_households:
-            return pd.Series({"median_income": np.nan, "income_coverage_pct": 0.0,
-                              "residential_households": total_households})
-        return pd.Series({
-            "median_income": np.average(valid["tract_income"], weights=valid["households"]),
-            "income_coverage_pct": 100 * covered_households / total_households
-                if total_households else 0.0,
-            "residential_households": total_households,
-        })
-    result = joined.groupby("nta_code", group_keys=False).apply(summarize).reset_index()
+            summaries.append({"nta_code":nta_code,"median_income":np.nan,
+                "income_coverage_pct":0.0,"residential_households":total_households})
+            continue
+        summaries.append({"nta_code":nta_code,
+            "median_income":np.average(valid["tract_income"],weights=valid["households"]),
+            "income_coverage_pct":100*covered_households/total_households if total_households else 0.0,
+            "residential_households":total_households})
+    result=pd.DataFrame(summaries)
     result["median_income"] = result["median_income"].round()
     result["income_coverage_pct"] = result["income_coverage_pct"].round(1)
     return result
+
+def _assert_unique_nta(frame, stage):
+    duplicates=frame.loc[frame["nta_code"].duplicated(keep=False),"nta_code"].dropna().unique()
+    if len(duplicates):
+        raise ValueError(f"Duplicate NTA codes after {stage}: {sorted(duplicates.tolist())}")
 
 # ── Live fetch ────────────────────────────────────────────────────────────
 live_ok = False
@@ -307,6 +312,7 @@ if LIVE_DATA:
         ).reset_index()
         gdf_boundaries = gdf_boundaries.merge(nta_land, on="nta_code", how="left")
         gdf_boundaries = gdf_boundaries.set_crs("EPSG:4326", allow_override=True)
+        _assert_unique_nta(gdf_boundaries,"boundary assembly")
         print(f"   ✓ {len(gdf_boundaries)} NTA polygons assembled")
 
         print("📡 Building current-tract to 2010-NTA spatial crosswalk…")
@@ -329,6 +335,7 @@ if LIVE_DATA:
         merged = gdf_boundaries.merge(df15, on="nta_code", how="left")
         # 2005 also supplies the stable 2010 NTA code.
         merged = merged.merge(df05, on="nta_code", how="left")
+        _assert_unique_nta(merged,"tree census joins")
         merged["trees_2015"] = merged["trees_2015"].fillna(0).astype(int)
         merged["trees_2005"] = merged["trees_2005"].fillna(0).astype(int)
 
@@ -339,6 +346,7 @@ if LIVE_DATA:
         acs_income=_fetch_acs_income()
         income_by_nta = _aggregate_income_to_nta(acs_income, current_xwalk)
         merged = merged.merge(income_by_nta, on="nta_code", how="left")
+        _assert_unique_nta(merged,"income join")
         merged["income_estimated"] = True
         merged["income_source_year"] = int(acs_income["income_source_year"].max())
         merged["income_source"] = "ACS five-year B19013 via Census Reporter; household-weighted tract approximation"
