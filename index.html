@@ -216,8 +216,24 @@
       border-left: 2px solid var(--green); border-radius: 0 5px 5px 0;
       padding: 10px 12px; font-size: 0.8rem; line-height: 1.62; color: var(--muted);
     }
-    .analysis-heading { display: flex; align-items: center; margin-bottom: 7px; }
+    .analysis-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
     .analysis-title { font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--green-bright); }
+    .analysis-mode {
+      font-family: var(--mono); font-size: 0.45rem; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted); border: 1px solid var(--border); border-radius: 3px; padding: 2px 5px;
+      white-space: nowrap;
+    }
+    .analysis-mode.ai { color: var(--green); border-color: var(--green-border); background: var(--green-lo); }
+    .analysis-mode.loading { animation: analysis-pulse 1.1s ease-in-out infinite; }
+    @keyframes analysis-pulse { 50% { opacity: 0.45; } }
+    .analysis-citation {
+      display: flex; flex-wrap: wrap; gap: 3px 7px; margin-top: 6px;
+      font-family: var(--mono); font-size: 0.48rem; line-height: 1.5; color: var(--muted);
+    }
+    .analysis-citation[hidden] { display: none; }
+    .analysis-citation a { color: var(--green); text-decoration: none; }
+    .analysis-citation a:not(:last-child)::after { content: ' ·'; color: var(--muted); }
+    .analysis-citation a:hover,.analysis-citation a:focus-visible { text-decoration: underline; outline: none; }
 
     /* ── PER-TAB PANEL SECTIONS ──────────────────────────── */
     .tab-panel { display: none; }
@@ -474,9 +490,11 @@
 
             <!-- One concise source-bound interpretation for the active metric -->
             <div class="analysis-heading">
-              <span class="analysis-title">Atlas analysis</span>
+              <span class="analysis-title" id="analysis-title">Atlas analysis</span>
+              <span class="analysis-mode" id="analysis-mode">Calculation-based</span>
             </div>
-            <div class="nta-summary" id="tp-equity-summary"></div>
+            <div class="nta-summary" id="tp-equity-summary" aria-live="polite"></div>
+            <div class="analysis-citation" id="analysis-citation" hidden></div>
             <div class="panel-divider"></div>
 
             <!-- TREES TAB PANEL -->
@@ -666,6 +684,10 @@ let boroughBuilt = false;
 let heatBuilt    = false;
 let currentNeighborhood = null;
 let currentMetric = 'trees';
+let aiEndpoint = '';
+let aiRequestController = null;
+let aiRequestSerial = 0;
+const aiCache = new Map();
 const NON_RESIDENTIAL_NAME = /airport|park-cemetery|cemetery|park$|riker|fort totten|governors island|ellis island|liberty island/i;
 
 function isInvestmentEligible(d) {
@@ -756,6 +778,122 @@ function makeSummary(p, metric) {
   return `Street-tree density is ${density >= refs.density ? 'above' : 'below'} the ranked-area average. The census count ${change >= 0 ? 'rose' : 'fell'} between 2005 and 2015.`;
 }
 
+function configuredAiEndpoint(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(String(value), window.location.href);
+    const local = url.hostname === '127.0.0.1' || url.hostname === 'localhost';
+    if (url.protocol !== 'https:' && !(local && url.protocol === 'http:')) return '';
+    if (url.username || url.password) return '';
+    return url.href;
+  } catch (error) {
+    return '';
+  }
+}
+
+async function loadAiConfig() {
+  try {
+    const response = await fetch('data/ai-config.json', { cache:'no-cache', credentials:'omit' });
+    if (!response.ok) return;
+    const config = await response.json();
+    aiEndpoint = configuredAiEndpoint(config.endpoint);
+  } catch (error) {
+    aiEndpoint = '';
+  }
+}
+
+const aiConfigReady = loadAiConfig();
+
+function renderCalculationAnalysis(p, metric, loading) {
+  document.getElementById('analysis-title').textContent = 'Atlas analysis';
+  const mode = document.getElementById('analysis-mode');
+  mode.textContent = loading ? 'Checking AI' : 'Calculation-based';
+  mode.className = 'analysis-mode' + (loading ? ' loading' : '');
+  document.getElementById('tp-equity-summary').textContent = makeSummary(p, metric);
+  const citation = document.getElementById('analysis-citation');
+  citation.hidden = true;
+  citation.replaceChildren();
+}
+
+function safeSourceUrl(value) {
+  try {
+    const url = new URL(String(value || ''), window.location.href);
+    if (url.protocol !== 'https:' && url.origin !== window.location.origin) return '';
+    return url.href;
+  } catch (error) {
+    return '';
+  }
+}
+
+function renderAiAnalysis(payload) {
+  document.getElementById('analysis-title').textContent = 'AI interpretation';
+  const mode = document.getElementById('analysis-mode');
+  mode.textContent = 'Source-grounded AI';
+  mode.className = 'analysis-mode ai';
+  document.getElementById('tp-equity-summary').textContent = payload.analysis;
+
+  const citation = document.getElementById('analysis-citation');
+  citation.replaceChildren();
+  citation.append(document.createTextNode('Sources:'));
+  (Array.isArray(payload.sources) ? payload.sources : []).slice(0, 3).forEach(source => {
+    const href = safeSourceUrl(source && source.url);
+    if (!href) return;
+    const link = document.createElement('a');
+    link.href = href;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = String(source.label || 'Source');
+    citation.append(link);
+  });
+  citation.hidden = citation.childNodes.length < 2;
+}
+
+async function refreshInterpretation(p, metric) {
+  const serial = ++aiRequestSerial;
+  if (aiRequestController) aiRequestController.abort();
+  aiRequestController = null;
+  renderCalculationAnalysis(p, metric, false);
+  if (!isInvestmentEligible(p)) return;
+
+  await aiConfigReady;
+  if (serial !== aiRequestSerial || !aiEndpoint) return;
+  const ntaCode = String(p.nta_code || '').toUpperCase();
+  const cacheKey = `${ntaCode}:${metric}`;
+  const cached = aiCache.get(cacheKey);
+  if (cached) {
+    renderAiAnalysis(cached);
+    return;
+  }
+
+  renderCalculationAnalysis(p, metric, true);
+  const controller = new AbortController();
+  aiRequestController = controller;
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+  try {
+    const response = await fetch(aiEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      body: JSON.stringify({ nta_code: ntaCode, metric }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`AI endpoint returned HTTP ${response.status}`);
+    const payload = await response.json();
+    const valid = payload && payload.generated_by === 'openai'
+      && payload.nta_code === ntaCode && payload.metric === metric
+      && typeof payload.analysis === 'string' && payload.analysis.length >= 30;
+    if (!valid) throw new Error('AI endpoint returned an invalid contract');
+    aiCache.set(cacheKey, payload);
+    if (serial === aiRequestSerial) renderAiAnalysis(payload);
+  } catch (error) {
+    if (serial === aiRequestSerial) renderCalculationAnalysis(p, metric, false);
+  } finally {
+    clearTimeout(timeout);
+    if (aiRequestController === controller) aiRequestController = null;
+  }
+}
+
 /* ── GEO MAP PANEL UPDATE ──────────────────────────────────── */
 function updatePanel(p) {
   currentNeighborhood = p;
@@ -841,7 +979,7 @@ function updatePanel(p) {
 
   // ── EQUITY PANEL ──────────────────────────────────────────
   document.getElementById('tp-score-big').textContent = hasScore ? score.toFixed(3) : 'Not ranked';
-  document.getElementById('tp-equity-summary').textContent = makeSummary(p, currentMetric);
+  renderCalculationAnalysis(p, currentMetric, false);
 
   // ── HEAT PANEL ────────────────────────────────────────────
   const hLbl = hasHeat ? heatLabel(heat) : EQ['Insufficient Data'];
@@ -873,6 +1011,7 @@ function updatePanel(p) {
   dataEl.classList.add('visible');
 
   buildScoreDetails(p);
+  refreshInterpretation(p, currentMetric);
 }
 
 function openNeighborhood(p, shouldZoom) {
@@ -915,7 +1054,7 @@ function switchMetricTab(tabKey) {
     );
   }
   if (currentNeighborhood) {
-    document.getElementById('tp-equity-summary').textContent = makeSummary(currentNeighborhood, tabKey);
+    refreshInterpretation(currentNeighborhood, tabKey);
   }
 }
 

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/interpret.mjs": {
+      "includeFiles": "data/processed/nta_environmental_snapshot.geojson",
+      "maxDuration": 15
+    }
+  }
+}

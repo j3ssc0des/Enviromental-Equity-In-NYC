@@ -26,7 +26,9 @@ jobs:
       - name: Install pinned application dependencies
         run: pip install -r requirements.txt
       - name: Compile Python
-        run: python -m py_compile nyc_trees_analysis.py scripts/validate_build.py .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
+        run: python -m py_compile nyc_trees_analysis.py scripts/validate_build.py scripts/write_ai_config.py .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
+      - name: Test grounded AI endpoint contract
+        run: npm test
       - name: Audit upstream schemas
         run: python .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
       - name: Build with official data only

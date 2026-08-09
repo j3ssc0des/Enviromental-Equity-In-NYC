@@ -53,6 +53,15 @@ for required in ("data/processed/nta_environmental_snapshot.geojson",
 pipeline=(ROOT/"nyc_trees_analysis.py").read_text()
 for forbidden in ("Heat Risk:", "Urban Heat Vulnerability", "Underserved Index"):
     if forbidden in pipeline: errors.append(f"unsupported map language remains: {forbidden}")
+ai_config=json.loads((ROOT/"data/ai-config.json").read_text())
+endpoint=ai_config.get("endpoint", "")
+if set(ai_config)!={"endpoint"}: errors.append("AI config must contain only the public endpoint")
+if endpoint and not endpoint.startswith("https://"): errors.append("AI endpoint must use HTTPS")
+api=(ROOT/"api/interpret.mjs").read_text()
+for required in ("parseRequestPayload", "buildGroundedContext", "OPENAI_API_KEY", "store: false", "UNSAFE_MODEL_OUTPUT"):
+    if required not in api: errors.append(f"grounded AI safeguard is missing: {required}")
+if re.search(r"sk-[A-Za-z0-9_-]{16,}", (ROOT/"index.html").read_text()+api):
+    errors.append("an API-key-like value appears in published source")
 if errors:
     print("BUILD VALIDATION FAILED\n- "+"\n- ".join(errors)); sys.exit(1)
 print("Build validation passed")
