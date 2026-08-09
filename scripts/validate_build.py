@@ -24,8 +24,10 @@ else:
     if eligible_coverage and min(eligible_coverage)<90: errors.append(f"eligible income coverage below 90%: {min(eligible_coverage)}")
     nonres=[p for p in props if p.get("investment_eligible") is False]
     if not nonres: errors.append("non-residential/context areas were not classified")
-    if any(p.get("underserved") is not None or p.get("heat_proxy") is not None for p in nonres):
-        errors.append("non-residential areas appear in investment or heat-proxy scoring")
+    if any(p.get("underserved") is not None for p in nonres):
+        errors.append("non-residential areas appear in screening-score comparisons")
+    if any("heat_proxy" in p or "heat_proxy_method" in p for p in props):
+        errors.append("retired duplicate tree-and-income proxy remains in published data")
     blocked_name=re.compile(r"airport|park-cemetery|cemetery|park$|riker|fort totten|governors island|ellis island|liberty island",re.I)
     leaked=[p.get("nta_name") for p in eligible if blocked_name.search(str(p.get("nta_name","")))]
     if leaked: errors.append(f"blocked context names appear in rankings: {leaked[:5]}")
@@ -53,14 +55,13 @@ for required in ("data/processed/nta_environmental_snapshot.geojson",
 pipeline=(ROOT/"nyc_trees_analysis.py").read_text()
 for forbidden in ("Heat Risk:", "Urban Heat Vulnerability", "Underserved Index"):
     if forbidden in pipeline: errors.append(f"unsupported map language remains: {forbidden}")
-ai_config=json.loads((ROOT/"data/ai-config.json").read_text())
-endpoint=ai_config.get("endpoint", "")
-if set(ai_config)!={"endpoint"}: errors.append("AI config must contain only the public endpoint")
-if endpoint and not endpoint.startswith("https://"): errors.append("AI endpoint must use HTTPS")
-api=(ROOT/"api/interpret.mjs").read_text()
-for required in ("parseRequestPayload", "buildGroundedContext", "OPENAI_API_KEY", "store: false", "UNSAFE_MODEL_OUTPUT"):
-    if required not in api: errors.append(f"grounded AI safeguard is missing: {required}")
-if re.search(r"sk-[A-Za-z0-9_-]{16,}", (ROOT/"index.html").read_text()+api):
+interpretation=(ROOT/"assets/interpretation.mjs").read_text()
+for required in ("buildInterpretation", "investment_eligible !== true", "not to make a funding decision"):
+    if required not in interpretation: errors.append(f"local interpretation safeguard is missing: {required}")
+published_text=(ROOT/"index.html").read_text()+interpretation
+for forbidden in ("OPENAI_API_KEY", "api.openai.com", "ATLAS_AI_ENDPOINT", "AI interpretation"):
+    if forbidden.lower() in published_text.lower(): errors.append(f"remote AI dependency remains: {forbidden}")
+if re.search(r"sk-[A-Za-z0-9_-]{16,}", published_text):
     errors.append("an API-key-like value appears in published source")
 if errors:
     print("BUILD VALIDATION FAILED\n- "+"\n- ".join(errors)); sys.exit(1)
