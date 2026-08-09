@@ -805,7 +805,9 @@ function makeSummary(p) {
   const change  = parseInt(p.tree_change)||0;
   const label   = p.equity_label||'Middle';
   if (p.investment_eligible === false)
-    return `${name} is a non-residential planning area shown for geographic context. It is excluded from community investment, heat-proxy, and screening-score rankings.`;
+    return p.area_context === 'Insufficient income coverage'
+      ? `${name} is visible for context but excluded from rankings because its income coverage is below the 90% quality threshold.`
+      : `${name} is a non-residential planning area shown for geographic context. It is excluded from community investment, heat-proxy, and screening-score rankings.`;
   const cStr    = change >= 0 ? `gained ${change.toLocaleString()} trees` : `lost ${Math.abs(change).toLocaleString()} trees`;
   if (label==='Higher Priority')
     return `${name} is among NYC's most underserved neighborhoods for green space. With only ${density} trees per km² and a median income of $${income.toLocaleString()}, it faces the sharpest need for street-tree investment.`;

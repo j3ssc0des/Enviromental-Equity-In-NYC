@@ -253,14 +253,15 @@ if LIVE_DATA:
         print("📡 Fetching 2005 tree census from NYC Open Data…")
         r = _fetch(
             "https://data.cityofnewyork.us/resource/29bw-z7pj.json",
-            params={"$select": "nta_name,boroname,COUNT(*) as trees",
-                    "$group":  "nta_name,boroname",
-                    "$where":  "nta_name IS NOT NULL",
+            params={"$select": "nta,COUNT(*) as trees",
+                    "$group":  "nta",
+                    "$where":  "nta IS NOT NULL",
                     "$limit":  "500"},
         )
         df05 = pd.DataFrame(r.json())
+        df05 = df05.rename(columns={"nta":"nta_code"})
         df05["trees_2005"] = pd.to_numeric(df05["trees"], errors="coerce").fillna(0).astype(int)
-        df05 = df05[["nta_name", "trees_2005"]]
+        df05 = df05[["nta_code", "trees_2005"]]
         print(f"   ✓ {df05['trees_2005'].sum():,.0f} trees · {len(df05)} NTAs")
 
         print("📡 Fetching 2010 census tract boundaries from US Census Bureau…")
@@ -326,8 +327,8 @@ if LIVE_DATA:
         # Merge tree counts onto real boundary polygons
         # 2015: join on NTA code (e.g. "BX31") — direct match
         merged = gdf_boundaries.merge(df15, on="nta_code", how="left")
-        # 2005: join on NTA name — best available key in the 2005 dataset
-        merged = merged.merge(df05, on="nta_name", how="left")
+        # 2005 also supplies the stable 2010 NTA code.
+        merged = merged.merge(df05, on="nta_code", how="left")
         merged["trees_2015"] = merged["trees_2015"].fillna(0).astype(int)
         merged["trees_2005"] = merged["trees_2005"].fillna(0).astype(int)
 
@@ -582,10 +583,20 @@ _nonresidential_name = merged["nta_name"].str.contains(
     r"airport|park-cemetery|cemetery|park$|riker|fort totten|governors island|ellis island|liberty island",
     case=False, regex=True, na=False,
 )
+_enough_households = pd.to_numeric(
+    merged.get("residential_households"), errors="coerce"
+).fillna(0) >= 100
+_enough_income_coverage = pd.to_numeric(
+    merged.get("income_coverage_pct"), errors="coerce"
+).fillna(0) >= 90
 merged["investment_eligible"] = (
-    pd.to_numeric(merged.get("residential_households"), errors="coerce").fillna(0) >= 100
-) & ~_nonresidential_name
-merged["area_context"] = np.where(merged["investment_eligible"], "Residential/community", "Non-residential/context")
+    _enough_households & ~_nonresidential_name & _enough_income_coverage
+)
+merged["area_context"] = np.select(
+    [~_enough_households | _nonresidential_name, ~_enough_income_coverage],
+    ["Non-residential/context", "Insufficient income coverage"],
+    default="Residential/community",
+)
 
 # Normalise 0–1
 def norm01(s):
