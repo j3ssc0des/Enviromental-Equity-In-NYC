@@ -223,9 +223,6 @@
       color: var(--muted); border: 1px solid var(--border); border-radius: 3px; padding: 2px 5px;
       white-space: nowrap;
     }
-    .analysis-mode.ai { color: var(--green); border-color: var(--green-border); background: var(--green-lo); }
-    .analysis-mode.loading { animation: analysis-pulse 1.1s ease-in-out infinite; }
-    @keyframes analysis-pulse { 50% { opacity: 0.45; } }
     .analysis-citation {
       display: flex; flex-wrap: wrap; gap: 3px 7px; margin-top: 6px;
       font-family: var(--mono); font-size: 0.48rem; line-height: 1.5; color: var(--muted);
@@ -288,7 +285,7 @@
     }
 
     /* Heat panel */
-    .heat-hero-num { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--orange); line-height: 1; margin-bottom: 3px; }
+    .screening-hero-num { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--orange); line-height: 1; margin-bottom: 3px; }
     .air-source { font-family: var(--mono); font-size: 0.48rem; letter-spacing: 0.04em; color: var(--muted); margin-top: 12px; line-height: 1.6; }
     .boro-compare { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 9px 11px; }
     .boro-compare-label { font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
@@ -349,29 +346,29 @@
     .borough-table tr:hover td { background: rgba(47,160,94,0.04); }
     .borough-table .mono-val { font-family: var(--mono); color: var(--green); }
 
-    /* ── HEAT INDEX VIEW ───────────────────────────────────── */
-    .heat-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 0.75rem; }
-    .heat-card {
+    /* ── SCREENING SCORE VIEW ───────────────────────────────────── */
+    .screening-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 0.75rem; }
+    .screening-card {
       background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
       padding: 1rem 1.1rem;
     }
-    .heat-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
-    .heat-nta { font-size: 0.88rem; font-weight: 600; color: #fff; line-height: 1.25; }
-    .heat-boro { font-family: var(--mono); font-size: 0.58rem; color: var(--muted); margin-top: 2px; letter-spacing: 0.06em; }
-    .heat-label-badge {
+    .screening-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
+    .screening-nta { font-size: 0.88rem; font-weight: 600; color: #fff; line-height: 1.25; }
+    .screening-boro { font-family: var(--mono); font-size: 0.58rem; color: var(--muted); margin-top: 2px; letter-spacing: 0.06em; }
+    .screening-label-badge {
       font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.1em;
       padding: 3px 7px; border-radius: 3px; flex-shrink: 0; text-transform: uppercase;
     }
-    .heat-bar-wrap { margin-bottom: 8px; }
-    .heat-bar-track { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin-bottom: 3px; }
-    .heat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.7s ease; }
-    .heat-bar-ends { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.5rem; color: var(--muted); }
-    .heat-stats { display: flex; gap: 12px; }
-    .heat-stat { font-family: var(--mono); font-size: 0.6rem; color: var(--muted); }
-    .heat-stat span { color: var(--text); }
+    .screening-bar-wrap { margin-bottom: 8px; }
+    .screening-bar-track { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin-bottom: 3px; }
+    .screening-bar-fill { height: 100%; border-radius: 3px; transition: width 0.7s ease; }
+    .screening-bar-ends { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.5rem; color: var(--muted); }
+    .screening-stats { display: flex; gap: 12px; }
+    .screening-stat { font-family: var(--mono); font-size: 0.6rem; color: var(--muted); }
+    .screening-stat span { color: var(--text); }
 
     /* Rank number */
-    .heat-rank { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); flex-shrink: 0; width: 20px; text-align: right; }
+    .screening-rank { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); flex-shrink: 0; width: 20px; text-align: right; }
 
     /* ── KEY FINDINGS ──────────────────────────────────────── */
     .findings { max-width: 900px; margin: 0 auto 3rem; padding: 0 1.5rem; }
@@ -438,7 +435,7 @@
     <div class="nav-tabs" role="tablist" aria-label="Atlas views">
       <button class="nav-tab active" data-tab="geomap" role="tab" aria-selected="true">MAP</button>
       <button class="nav-tab" data-tab="borough" role="tab" aria-selected="false">BOROUGHS</button>
-      <button class="nav-tab" data-tab="heat" role="tab" aria-selected="false">SCREENING</button>
+      <button class="nav-tab" data-tab="screening" role="tab" aria-selected="false">SCREENING</button>
     </div>
     <div class="nav-right">
       <span class="live-badge">AUDITED DATA</span>
@@ -468,7 +465,6 @@
             <button class="mtab active" data-tab="trees" role="tab" aria-selected="true">TREES</button>
             <button class="mtab" data-tab="income" role="tab" aria-selected="false">INCOME</button>
             <button class="mtab" data-tab="equity" role="tab" aria-selected="false">SCORE</button>
-            <button class="mtab" data-tab="heat" role="tab" aria-selected="false">PROXY</button>
           </div>
         </div>
         <div class="panel-body" id="panel-body">
@@ -491,7 +487,7 @@
             <!-- One concise source-bound interpretation for the active metric -->
             <div class="analysis-heading">
               <span class="analysis-title" id="analysis-title">Atlas analysis</span>
-              <span class="analysis-mode" id="analysis-mode">Calculation-based</span>
+              <span class="analysis-mode" id="analysis-mode">Rules + public data</span>
             </div>
             <div class="nta-summary" id="tp-equity-summary" aria-live="polite"></div>
             <div class="analysis-citation" id="analysis-citation" hidden></div>
@@ -560,19 +556,6 @@
               <div id="tp-score-details"></div>
             </div>
 
-            <!-- HEAT TAB PANEL -->
-            <div class="tab-panel" id="tp-heat">
-              <div class="hero-stat">
-                <div class="heat-hero-num" id="tp-heat-val"></div>
-                <div class="hero-label">Tree-and-income screening proxy, not observed heat</div>
-              </div>
-              <div id="tp-heat-badge" class="avg-compare" style="margin-bottom:12px"></div>
-              <div class="boro-compare">
-                <div class="boro-compare-label">Borough average proxy</div>
-                <div class="boro-compare-val" id="tp-boro-heat"></div>
-              </div>
-            </div>
-
           </div><!-- /.nta-data -->
 
 
@@ -615,16 +598,16 @@
     </div>
   </div>
 
-  <!-- ③ HEAT INDEX TAB ─────────────────────────────────────── -->
+  <!-- ③ SCREENING SCORE TAB ─────────────────────────────────────── -->
   <div id="tab-heat" class="tab-view">
     <div class="tabview-inner">
       <div class="tv-header">
-        <div class="tv-title">Tree-and-income screening proxy: top 20</div>
-        <div class="tv-sub">Lower street-tree density plus lower income. This is not observed temperature or NYC's official Heat Vulnerability Index.</div>
+        <div class="tv-title">Tree + Income Screening Score: top 20</div>
+        <div class="tv-sub">Higher scores mean lower street-tree density (55%) and lower estimated income (45%) overlap more strongly. This project comparison is not measured risk or a funding decision.</div>
       </div>
-      <div id="heat-loading" class="loading-msg">Loading data from map...</div>
-      <div id="heat-content" style="display:none">
-        <div class="heat-grid" id="heat-grid"></div>
+      <div id="screening-loading" class="loading-msg">Loading data from map...</div>
+      <div id="screening-content" style="display:none">
+        <div class="screening-grid" id="screening-grid"></div>
       </div>
     </div>
   </div>
@@ -677,17 +660,15 @@
     </div>
   </footer>
 
-<script>
+<script type="module">
+import { buildInterpretation } from './assets/interpretation.mjs';
+
 /* ── SHARED STATE ──────────────────────────────────────────── */
 let ntaData      = [];
 let boroughBuilt = false;
-let heatBuilt    = false;
+let screeningBuilt = false;
 let currentNeighborhood = null;
 let currentMetric = 'trees';
-let aiEndpoint = '';
-let aiRequestController = null;
-let aiRequestSerial = 0;
-const aiCache = new Map();
 const NON_RESIDENTIAL_NAME = /airport|park-cemetery|cemetery|park$|riker|fort totten|governors island|ellis island|liberty island/i;
 
 function isInvestmentEligible(d) {
@@ -736,162 +717,31 @@ function scoreToColor(v) {
   return `rgb(${Math.round(245+t*(109-245))},${Math.round(184-t*184)},0)`;
 }
 
-function heatColor(v) {
-  // orange (#d94f00) → dark red (#6d0000)
-  const r = Math.round(217 + v*(109-217));
-  const g = Math.round(79  + v*(0-79));
-  return `rgb(${r},${g},0)`;
-}
-
-function heatLabel(v) {
-  if (v >= 0.75) return { text:'HIGHER PROXY', bg:'rgba(109,0,0,0.2)', border:'#c0392b', text2:'#c0392b' };
-  if (v >= 0.55) return { text:'ELEVATED PROXY', bg:'rgba(217,79,0,0.15)', border:'#d94f00', text2:'#d94f00' };
-  if (v >= 0.35) return { text:'MIDDLE PROXY', bg:'rgba(245,184,0,0.12)',border:'#f5b800', text2:'#f5b800' };
-  return               { text:'LOWER PROXY', bg:'rgba(47,160,94,0.12)',border:'#2fa05e', text2:'#2fa05e' };
-}
-
-function makeSummary(p, metric) {
-  const name    = p.nta_name || 'This neighborhood';
-  const density = Math.round(parseFloat(p.density_2015)||0);
-  const incomeValue = Number(p.median_income);
-  const income = Number.isFinite(incomeValue) ? Math.round(incomeValue) : null;
-  const change  = parseInt(p.tree_change)||0;
-  const label   = p.equity_label||'Middle';
-  const heat = Number(p.heat_proxy);
-  if (!isInvestmentEligible(p))
-    return p.area_context === 'Insufficient income coverage'
-      ? `${name} is visible for context but excluded from rankings because its income coverage is below the 90% quality threshold.`
-      : `${name} is a non-residential planning area shown for geographic context. It is excluded from community investment, heat-proxy, and screening-score rankings.`;
-  const refs = currentReferences();
-  if (metric === 'income') {
-    if (income == null) return 'A sufficiently covered income estimate is not available for this area.';
-    return `Estimated household income is ${income >= refs.income ? 'above' : 'below'} the eligible-area median. It adds equity context, but does not explain tree conditions by itself.`;
-  }
-  if (metric === 'equity') {
-    const position = label === 'Higher Priority' || label === 'Above Average' ? 'higher' : label === 'Lower Priority' || label === 'Below Average' ? 'lower' : 'middle';
-    return `Lower tree density and income overlap puts ${name} near the ${position} end of this project score. Use it to choose what to investigate next, not as a funding verdict.`;
-  }
-  if (metric === 'heat') {
-    const position = Number.isFinite(heat) && heat >= .75 ? 'higher' : Number.isFinite(heat) && heat >= .55 ? 'elevated' : Number.isFinite(heat) && heat >= .35 ? 'middle' : 'lower';
-    return `This tree-and-income proxy is ${position} relative to other eligible areas. It is not measured temperature, so pair it with official HVI and local observations.`;
-  }
-  return `Street-tree density is ${density >= refs.density ? 'above' : 'below'} the ranked-area average. The census count ${change >= 0 ? 'rose' : 'fell'} between 2005 and 2015.`;
-}
-
-function configuredAiEndpoint(value) {
-  if (!value) return '';
-  try {
-    const url = new URL(String(value), window.location.href);
-    const local = url.hostname === '127.0.0.1' || url.hostname === 'localhost';
-    if (url.protocol !== 'https:' && !(local && url.protocol === 'http:')) return '';
-    if (url.username || url.password) return '';
-    return url.href;
-  } catch (error) {
-    return '';
-  }
-}
-
-async function loadAiConfig() {
-  try {
-    const response = await fetch('data/ai-config.json', { cache:'no-cache', credentials:'omit' });
-    if (!response.ok) return;
-    const config = await response.json();
-    aiEndpoint = configuredAiEndpoint(config.endpoint);
-  } catch (error) {
-    aiEndpoint = '';
-  }
-}
-
-const aiConfigReady = loadAiConfig();
-
-function renderCalculationAnalysis(p, metric, loading) {
+function renderInterpretation(p, metric) {
   document.getElementById('analysis-title').textContent = 'Atlas analysis';
   const mode = document.getElementById('analysis-mode');
-  mode.textContent = loading ? 'Checking AI' : 'Calculation-based';
-  mode.className = 'analysis-mode' + (loading ? ' loading' : '');
-  document.getElementById('tp-equity-summary').textContent = makeSummary(p, metric);
-  const citation = document.getElementById('analysis-citation');
-  citation.hidden = true;
-  citation.replaceChildren();
-}
+  mode.textContent = 'Rules + public data';
+  mode.className = 'analysis-mode';
 
-function safeSourceUrl(value) {
-  try {
-    const url = new URL(String(value || ''), window.location.href);
-    if (url.protocol !== 'https:' && url.origin !== window.location.origin) return '';
-    return url.href;
-  } catch (error) {
-    return '';
-  }
-}
-
-function renderAiAnalysis(payload) {
-  document.getElementById('analysis-title').textContent = 'AI interpretation';
-  const mode = document.getElementById('analysis-mode');
-  mode.textContent = 'Source-grounded AI';
-  mode.className = 'analysis-mode ai';
-  document.getElementById('tp-equity-summary').textContent = payload.analysis;
+  const result = buildInterpretation(p, metric, currentReferences());
+  document.getElementById('tp-equity-summary').textContent = result.text;
 
   const citation = document.getElementById('analysis-citation');
   citation.replaceChildren();
-  citation.append(document.createTextNode('Sources:'));
-  (Array.isArray(payload.sources) ? payload.sources : []).slice(0, 3).forEach(source => {
-    const href = safeSourceUrl(source && source.url);
-    if (!href) return;
+  if (result.sources.length) citation.append(document.createTextNode('Sources:'));
+  result.sources.forEach(source => {
     const link = document.createElement('a');
-    link.href = href;
+    link.href = source.url;
     link.target = '_blank';
     link.rel = 'noopener';
-    link.textContent = String(source.label || 'Source');
+    link.textContent = source.label;
     citation.append(link);
   });
   citation.hidden = citation.childNodes.length < 2;
 }
 
-async function refreshInterpretation(p, metric) {
-  const serial = ++aiRequestSerial;
-  if (aiRequestController) aiRequestController.abort();
-  aiRequestController = null;
-  renderCalculationAnalysis(p, metric, false);
-  if (!isInvestmentEligible(p)) return;
-
-  await aiConfigReady;
-  if (serial !== aiRequestSerial || !aiEndpoint) return;
-  const ntaCode = String(p.nta_code || '').toUpperCase();
-  const cacheKey = `${ntaCode}:${metric}`;
-  const cached = aiCache.get(cacheKey);
-  if (cached) {
-    renderAiAnalysis(cached);
-    return;
-  }
-
-  renderCalculationAnalysis(p, metric, true);
-  const controller = new AbortController();
-  aiRequestController = controller;
-  const timeout = setTimeout(() => controller.abort(), 12_000);
-  try {
-    const response = await fetch(aiEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'omit',
-      referrerPolicy: 'no-referrer',
-      body: JSON.stringify({ nta_code: ntaCode, metric }),
-      signal: controller.signal,
-    });
-    if (!response.ok) throw new Error(`AI endpoint returned HTTP ${response.status}`);
-    const payload = await response.json();
-    const valid = payload && payload.generated_by === 'openai'
-      && payload.nta_code === ntaCode && payload.metric === metric
-      && typeof payload.analysis === 'string' && payload.analysis.length >= 30;
-    if (!valid) throw new Error('AI endpoint returned an invalid contract');
-    aiCache.set(cacheKey, payload);
-    if (serial === aiRequestSerial) renderAiAnalysis(payload);
-  } catch (error) {
-    if (serial === aiRequestSerial) renderCalculationAnalysis(p, metric, false);
-  } finally {
-    clearTimeout(timeout);
-    if (aiRequestController === controller) aiRequestController = null;
-  }
+function refreshInterpretation(p, metric) {
+  renderInterpretation(p, metric);
 }
 
 /* ── GEO MAP PANEL UPDATE ──────────────────────────────────── */
@@ -907,11 +757,8 @@ function updatePanel(p) {
   const income = Number.isFinite(incomeValue) ? Math.round(incomeValue) : null;
   const change = parseInt(p.tree_change)    || 0;
   const scoreValue = p.underserved == null ? NaN : Number(p.underserved);
-  const heatValue = p.heat_proxy == null ? NaN : Number(p.heat_proxy);
   const hasScore = eligible && Number.isFinite(scoreValue);
-  const hasHeat = eligible && Number.isFinite(heatValue);
   const score = hasScore ? scoreValue : 0;
-  const heat = hasHeat ? heatValue : 0;
   const boro   = p.boro_name || p.borough || '';
   const refs = currentReferences();
 
@@ -979,30 +826,6 @@ function updatePanel(p) {
 
   // ── EQUITY PANEL ──────────────────────────────────────────
   document.getElementById('tp-score-big').textContent = hasScore ? score.toFixed(3) : 'Not ranked';
-  renderCalculationAnalysis(p, currentMetric, false);
-
-  // ── HEAT PANEL ────────────────────────────────────────────
-  const hLbl = hasHeat ? heatLabel(heat) : EQ['Insufficient Data'];
-  document.getElementById('tp-heat-val').textContent = hasHeat ? heat.toFixed(3) : 'Not ranked';
-  document.getElementById('tp-heat-val').style.color = hLbl.text2 || hLbl.text;
-
-  const hBadge = document.getElementById('tp-heat-badge');
-  hBadge.textContent = hasHeat ? hLbl.text : 'CONTEXT ONLY';
-  hBadge.style.cssText = `background:${hLbl.bg};border:1px solid ${hLbl.border};color:${hLbl.text2 || hLbl.text};font-family:var(--mono);font-size:0.65rem;letter-spacing:0.1em;border-radius:4px;padding:4px 10px;display:inline-block`;
-
-  // Borough average heat
-  if (hasHeat && ntaData.length > 1) {
-    const boroNeighbs = ntaData.filter(d => isInvestmentEligible(d) && Number.isFinite(Number(d.heat_proxy)) && (d.boro_name || d.borough) === boro);
-    if (boroNeighbs.length > 0) {
-      const boroAvgHeat = boroNeighbs.reduce((s,d) => s + (parseFloat(d.heat_proxy)||0), 0) / boroNeighbs.length;
-      const diff2 = heat - boroAvgHeat;
-      document.getElementById('tp-boro-heat').textContent =
-        `${boroAvgHeat.toFixed(3)} (${boro}); this neighborhood is ${diff2 >= 0 ? '+' : ''}${diff2.toFixed(3)} vs borough avg`;
-    }
-  } else {
-    document.getElementById('tp-boro-heat').textContent = 'Not included in residential comparison';
-  }
-
   // Show the loaded state
   document.getElementById('placeholder').style.display = 'none';
   const dataEl = document.getElementById('nta-data');
@@ -1045,7 +868,6 @@ function switchMetricTab(tabKey) {
     trees:'Tree Density (2015)',
     income:'Median Household Income',
     equity:'Project Screening Score',
-    heat:'Tree + Income Screening Proxy',
   };
   const frame = document.getElementById('map-frame');
   if (frame && frame.contentWindow && metricLayers[tabKey]) {
@@ -1179,54 +1001,54 @@ function buildBoroughStats() {
   document.getElementById('borough-content').style.display = 'block';
 }
 
-/* ── HEAT INDEX ────────────────────────────────────────────── */
-function buildHeatIndex() {
-  if (heatBuilt || !ntaData.length) return;
-  heatBuilt = true;
+/* ── SCREENING SCORE RANKING ───────────────────────────────── */
+function buildScreeningIndex() {
+  if (screeningBuilt || !ntaData.length) return;
+  screeningBuilt = true;
 
   const sorted = ntaData
-    .filter(d => isInvestmentEligible(d) && d.heat_proxy != null && Number.isFinite(Number(d.heat_proxy)))
-    .map(d => ({ ...d, _heat: parseFloat(d.heat_proxy)||0 }))
-    .sort((a,b) => b._heat - a._heat)
+    .filter(d => isInvestmentEligible(d) && d.underserved != null && Number.isFinite(Number(d.underserved)))
+    .map(d => ({ ...d, _score: parseFloat(d.underserved)||0 }))
+    .sort((a,b) => b._score - a._score)
     .slice(0, 20);
 
-  const maxHeat = sorted[0] ? sorted[0]._heat : 1;
+  const maxScore = sorted[0] ? sorted[0]._score : 1;
 
   const cards = sorted.map((d, i) => {
-    const heat     = d._heat;
-    const pct      = (heat/maxHeat)*100;
-    const lbl      = heatLabel(heat);
+    const score    = d._score;
+    const pct      = (score/maxScore)*100;
+    const lbl      = EQ[d.equity_label] || EQ.Middle;
     const density  = (parseFloat(d.density_2015)||0).toFixed(0);
     const income   = parseInt(d.median_income)||0;
     const boro     = (d.boro_name||d.borough||'').toUpperCase();
 
-    return `<div class="heat-card">
-      <div class="heat-card-top">
+    return `<div class="screening-card">
+      <div class="screening-card-top">
         <div>
-          <div class="heat-nta">${esc(d.nta_name||'Not available')}</div>
-          <div class="heat-boro">${esc(boro)}</div>
+          <div class="screening-nta">${esc(d.nta_name||'Not available')}</div>
+          <div class="screening-boro">${esc(boro)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <div class="heat-rank">#${i+1}</div>
-          <div class="heat-label-badge" style="background:${lbl.bg};border:1px solid ${lbl.border};color:${lbl.text2}">${lbl.text}</div>
+          <div class="screening-rank">#${i+1}</div>
+          <div class="screening-label-badge" style="background:${lbl.bg};border:1px solid ${lbl.border};color:${lbl.text}">${esc(d.equity_label || 'Middle')}</div>
         </div>
       </div>
-      <div class="heat-bar-wrap">
-        <div class="heat-bar-track">
-          <div class="heat-bar-fill" style="width:${pct}%;background:${heatColor(heat)}"></div>
+      <div class="screening-bar-wrap">
+        <div class="screening-bar-track">
+          <div class="screening-bar-fill" style="width:${pct}%;background:${scoreToColor(score)}"></div>
         </div>
-        <div class="heat-bar-ends"><span>LOWER PROXY</span><span>${heat.toFixed(3)}</span></div>
+        <div class="screening-bar-ends"><span>LOWER SCORE</span><span>${score.toFixed(3)}</span></div>
       </div>
-      <div class="heat-stats">
-        <div class="heat-stat">Density <span>${density} / km²</span></div>
-        <div class="heat-stat">Income <span>$${income.toLocaleString()}</span></div>
+      <div class="screening-stats">
+        <div class="screening-stat">Density <span>${density} / km²</span></div>
+        <div class="screening-stat">Income <span>$${income.toLocaleString()}</span></div>
       </div>
     </div>`;
   }).join('');
 
-  document.getElementById('heat-grid').innerHTML = cards;
-  document.getElementById('heat-loading').style.display = 'none';
-  document.getElementById('heat-content').style.display = 'block';
+  document.getElementById('screening-grid').innerHTML = cards;
+  document.getElementById('screening-loading').style.display = 'none';
+  document.getElementById('screening-content').style.display = 'block';
 }
 
 /* ── IFRAME INJECTION ──────────────────────────────────────── */
@@ -1378,14 +1200,14 @@ function buildFindings() {
 
 function resetDerivedViews() {
   boroughBuilt = false;
-  heatBuilt = false;
+  screeningBuilt = false;
   document.getElementById('borough-charts').innerHTML = '';
   document.getElementById('borough-tbody').innerHTML = '';
   document.getElementById('borough-loading').style.display = '';
   document.getElementById('borough-content').style.display = 'none';
-  document.getElementById('heat-grid').innerHTML = '';
-  document.getElementById('heat-loading').style.display = '';
-  document.getElementById('heat-content').style.display = 'none';
+  document.getElementById('screening-grid').innerHTML = '';
+  document.getElementById('screening-loading').style.display = '';
+  document.getElementById('screening-content').style.display = 'none';
 }
 
 function setNeighborhoodData(rows) {
@@ -1400,7 +1222,7 @@ function setNeighborhoodData(rows) {
   ntaData = validated;
   resetDerivedViews();
   buildBoroughStats();
-  buildHeatIndex();
+  buildScreeningIndex();
   buildFindings();
 
   document.getElementById('nta-options').innerHTML = ntaData
@@ -1457,7 +1279,7 @@ async function extractNeighborhoodData() {
   console.warn('Validated neighborhood data unavailable', errors);
   document.getElementById('data-status').innerHTML = '<span><strong>DATA UNAVAILABLE</strong> Rankings are hidden rather than showing stale values.</span><a href="docs/methodology.md">Methodology</a>';
   document.getElementById('borough-loading').textContent = 'Validated data unavailable. Rankings are hidden.';
-  document.getElementById('heat-loading').textContent = 'Validated data unavailable. Rankings are hidden.';
+  document.getElementById('screening-loading').textContent = 'Validated data unavailable. Rankings are hidden.';
 }
 
 mapFrame.addEventListener('load', function() {
@@ -1510,7 +1332,7 @@ document.querySelectorAll('.nav-tab').forEach(function(btn) {
 
     // Build tab content on first visit (data may have loaded by now)
     if (tab === 'borough') buildBoroughStats();
-    if (tab === 'heat')    buildHeatIndex();
+    if (tab === 'screening')    buildScreeningIndex();
   });
 });
 

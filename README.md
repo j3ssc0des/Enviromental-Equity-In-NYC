@@ -10,21 +10,20 @@ An expanding, source-transparent atlas of New York City environmental conditions
 - Historical tree-count change
 - ACS household-income context with coverage metadata
 - A clearly labeled project screening score
-- A clearly labeled tree-and-income heat proxy
 - A compact map-first interface with expandable neighborhood details
 - A persistent interpretation sidebar with source-bound neighborhood narratives
-- An optional server-side, source-grounded AI interpretation with a calculation-based fallback
+- A deterministic explanation engine that runs entirely in the browser with no API key or usage fees
 - A validated GeoJSON snapshot used by the map, rankings, findings, and localhost preview
 
-Street trees are not total canopy. The proxy is not measured temperature or NYC's official Heat Vulnerability Index. Read [methodology](docs/methodology.md) before interpreting results.
+Street trees are not total canopy, and the screening score is not measured environmental risk. Read [methodology](docs/methodology.md) before interpreting results.
 
-Airports, parks, cemeteries, islands, correctional facilities, and other areas with fewer than 100 ACS households remain visible for geographic context but are excluded from residential investment rankings, priority markers, and heat-proxy comparisons.
+Airports, parks, cemeteries, islands, correctional facilities, and other areas with fewer than 100 ACS households remain visible for geographic context but are excluded from residential screening comparisons and priority markers.
 
 ## Roadmap
 
 The [data catalog](docs/data-catalog.md) tracks official heat, flooding, canopy, air, pollution, water, health, and community-vulnerability sources. A dataset is promoted only after its native geography, uncertainty, transformation, missingness behavior, and update cadence are documented and tested.
 
-The interpretation sidebar supports a server-side AI explanation layer. The browser sends only an NTA code and metric; the server reloads validated atlas records, supplies source metadata, and returns qualitative prose beside deterministic values and citations. If the endpoint is missing, slow, invalid, or unavailable, the current calculation-backed narrative remains visible. API keys never enter the GitHub Pages client. See [AI analysis architecture and deployment](docs/ai-analysis.md).
+The interpretation sidebar uses transparent rules to compare each eligible neighborhood with the same validated reference values shown elsewhere in the interface. It describes direction and context, links directly to the relevant public sources, and states the limitations of each metric. It runs locally in the visitor's browser, so the deployed site needs no API key, serverless function, paid AI service, or credit card.
 
 ## Reliability
 

@@ -47,7 +47,7 @@ jobs:
       - name: Validate build
         run: python3 scripts/validate_build.py
 
-      - name: Test grounded AI endpoint contract
+      - name: Test local interpretation rules
         run: npm test
 
       - name: Stage site files
@@ -55,11 +55,6 @@ jobs:
           mkdir _site
           cp index.html nyc_trees_map.html _site/
           cp -R assets docs data _site/
-
-      - name: Configure optional AI endpoint
-        env:
-          ATLAS_AI_ENDPOINT: ${{ vars.ATLAS_AI_ENDPOINT }}
-        run: python3 scripts/write_ai_config.py _site/data/ai-config.json
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

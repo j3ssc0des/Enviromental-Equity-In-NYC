@@ -22,7 +22,7 @@ NYC DOHMH annual PM2.5 estimates are published for health geographies such as UH
 
 ## Heat
 
-The project's original “heat vulnerability” value was a tree-and-income proxy, not measured heat. The interface must label it as a proxy until it is replaced by the official NYC Heat Vulnerability Index. Official HVI values should remain in their published geography or use an explicit spatial crosswalk.
+The atlas does not currently calculate heat vulnerability or present its tree-and-income screening score as a heat measure. A future heat module should use NYC's official Heat Vulnerability Index in its published geography or an explicit spatial crosswalk.
 
 ## Screening score
 
@@ -32,8 +32,8 @@ Any combined score is project-defined. It must expose its component values and w
 
 Mapped associations do not prove that income caused tree coverage, that trees caused local air quality, or that observed differences reflect a specific investment history. Narrative text uses “associated with” language unless a cited study supports a causal statement.
 
-When the optional AI endpoint is configured, the browser sends only the selected NTA code and metric. The server independently reloads the validated snapshot and computes all evidence and source links. The model writes only a short qualitative interpretation and is prohibited from emitting figures, URLs, causal claims, or funding recommendations. Exact values and source years remain deterministic interface elements. Invalid model output, timeout, missing configuration, or any endpoint error restores the calculation-based narrative without hiding the neighborhood data. See [AI analysis architecture](ai-analysis.md).
+The neighborhood interpretation is generated locally from explicit rules in `assets/interpretation.mjs`; it does not call an AI model or remote interpretation service. The rules compare tree density with the area-weighted eligible-area average, income with the eligible-area median, historical tree-count direction, and the published project scores. Each metric receives a fixed limitation statement and links to its public source. Automated tests run every neighborhood through every metric and reject causal, hazardous, or prescriptive funding language.
 
 ## Community investment eligibility
 
-Airports, parks, cemeteries, islands, correctional facilities, and other planning areas with fewer than 100 ACS households remain visible as geographic context. They are labeled non-residential and excluded from community screening scores, heat-proxy rankings, priority markers, and borough investment comparisons. This prevents land-intensive infrastructure areas from displacing residential communities in rankings.
+Airports, parks, cemeteries, islands, correctional facilities, and other planning areas with fewer than 100 ACS households remain visible as geographic context. They are labeled non-residential and excluded from community screening scores, priority markers, and borough investment comparisons. This prevents land-intensive infrastructure areas from displacing residential communities in rankings.

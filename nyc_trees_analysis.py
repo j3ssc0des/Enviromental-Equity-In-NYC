@@ -476,16 +476,13 @@ merged["inc_norm"] = np.nan
 merged["den_norm"] = np.nan
 merged.loc[eligible, "inc_norm"] = merged.loc[eligible, "median_income"].rank(pct=True)
 merged.loc[eligible, "den_norm"] = merged.loc[eligible, "density_2015"].rank(pct=True)
-merged["heat_proxy"]  = (1 - merged["den_norm"] * 0.6 - merged["inc_norm"] * 0.4).round(3)
-merged["heat_proxy_method"] = "Project proxy: 60% street-tree density percentile + 40% income percentile"
-
 # Project screening score. PM2.5 is excluded until a valid spatial crosswalk exists.
 merged["underserved"] = (
     0.55 * (1 - merged["den_norm"]) +
     0.45 * (1 - merged["inc_norm"])
 ).round(3)
 merged.loc[merged[["density_2015", "median_income"]].isna().any(axis=1), "underserved"] = np.nan
-merged.loc[~merged["investment_eligible"], ["underserved", "heat_proxy"]] = np.nan
+merged.loc[~merged["investment_eligible"], "underserved"] = np.nan
 merged["screening_score_method"] = "Project-defined: 55% tree density percentile + 45% income percentile"
 
 # Bucket for labelling
@@ -507,7 +504,7 @@ export_cols = [
     "area_km2", "density_2015", "tree_change", "pct_change",
     "median_income", "income_coverage_pct", "income_estimated", "income_source",
     "residential_households", "investment_eligible", "area_context",
-    "heat_proxy", "heat_proxy_method", "underserved", "screening_score_method",
+    "underserved", "screening_score_method",
     "equity_label", "pm25", "pm25_estimated", "data_mode", "generated_at",
     "tree_source_year", "income_source_year", "geometry",
     "tree_2005_unassigned_count", "tree_2005_mapping_coverage_pct",
@@ -612,17 +609,6 @@ CHANGE_CM = StepColormap(
     caption="Tree Count Change (2005 → 2015)",
 )
 
-# TREE-AND-INCOME PROXY: 5-step fire scale (quantile breaks)
-_heat_colors = ["#ffffb2", "#fecc5c", "#fd8d3c", "#f03b20", "#bd0026"]
-_heat_q = _ensure_breaks(
-    [float(merged["heat_proxy"].quantile(q)) for q in [0, 0.2, 0.4, 0.6, 0.8, 1.0]]
-)
-HEAT_CM = StepColormap(
-    colors=_heat_colors, index=_heat_q,
-    vmin=_heat_q[0], vmax=_heat_q[-1],
-    caption="Tree + Income Screening Proxy",
-)
-
 # ── Print breakpoints ────────────────────────────────────────────────────
 print(f"\n  Tree Density breaks: "
       f"{_density_q[1]:.0f} | {_density_q[2]:.0f} | {_density_q[3]:.0f} | {_density_q[4]:.0f} trees/km²")
@@ -630,8 +616,6 @@ print(f"  Income breaks: "
       f"${_income_q[1]:,.0f} | ${_income_q[2]:,.0f} | ${_income_q[3]:,.0f} | ${_income_q[4]:,.0f}")
 print(f"  Screening score breaks: "
       f"{_underserved_q[1]:.3f} | {_underserved_q[2]:.3f} | {_underserved_q[3]:.3f} | {_underserved_q[4]:.3f}")
-print(f"  Tree + income proxy breaks: "
-      f"{_heat_q[1]:.3f} | {_heat_q[2]:.3f} | {_heat_q[3]:.3f} | {_heat_q[4]:.3f}")
 
 # ── Map object ───────────────────────────────────────────────────
 m = folium.Map(
@@ -663,7 +647,7 @@ def make_layer(value_col, colormap, layer_name, show=False):
     def style(feat):
         props = feat["properties"]
         val = props.get(value_col)
-        if val is None or (value_col in {"underserved", "heat_proxy"} and not props.get("investment_eligible")):
+        if val is None or (value_col == "underserved" and not props.get("investment_eligible")):
             return {"fillColor": "#39433d", "color": "#7b8580",
                     "weight": 0.5, "fillOpacity": 0.45}
         try:    color = colormap(float(val))
@@ -686,9 +670,8 @@ tree_density_layer = make_layer("density_2015", DENSITY_CM, "Tree Density (2015)
 income_layer = make_layer("median_income", INCOME_CM, "Median Household Income", show=False)
 screening_layer = make_layer("underserved", UNDERSERVED_CM, "Project Screening Score", show=False)
 tree_change_layer = make_layer("tree_change", CHANGE_CM, "Tree Change 2005→2015", show=False)
-proxy_layer = make_layer("heat_proxy", HEAT_CM, "Tree + Income Screening Proxy", show=False)
 
-for atlas_layer in (tree_density_layer, income_layer, screening_layer, tree_change_layer, proxy_layer):
+for atlas_layer in (tree_density_layer, income_layer, screening_layer, tree_change_layer):
     atlas_layer.add_to(m)
 
 _atlas_layer_vars = {
@@ -696,7 +679,6 @@ _atlas_layer_vars = {
     "Median Household Income": income_layer.get_name(),
     "Project Screening Score": screening_layer.get_name(),
     "Tree Change 2005→2015": tree_change_layer.get_name(),
-    "Tree + Income Screening Proxy": proxy_layer.get_name(),
 }
 
 # ── Higher-score screening markers ───────────────────────────────
@@ -780,13 +762,6 @@ _TOOLTIP_JS = """
       html+='<div style="color:'+cc+';font-size:11px">'
            +(chg>=0?'+':'-')
            +Math.abs(chg).toLocaleString()+' trees since 2005</div>';
-    }else if(name.indexOf('Proxy')>=0){
-      if(!eligible||p.heat_proxy==null) return html+'<div style="color:#9aa59f;font-size:11px">Context only. Not ranked.</div></div>';
-      var heat=parseFloat(p.heat_proxy);
-      var hl=heat>=0.75?'Higher proxy':heat>=0.55?'Elevated proxy':heat>=0.35?'Middle proxy':'Lower proxy';
-      var hc=heat>=0.75?'#c0392b':heat>=0.55?'#d94f00':heat>=0.35?'#f5b800':'#2fa05e';
-      html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">Tree + income proxy: '+heat.toFixed(3)+'</div>'
-           +'<span style="color:'+hc+';font-size:10px">'+hl+'</span>';
     }else{
       html+='<span style="background:'+(EQ[p.equity_label]||'#888')
            +';color:#fff;padding:2px 8px;border-radius:3px;font-size:10px">'
@@ -896,24 +871,14 @@ _leg_change = (
     + _lr("#74add1", f"{_change_breaks[3]:,.0f} &#x2013; {_change_breaks[4]:,.0f}")
     + _lr("#313695", f"{_change_breaks[4]:,.0f} &#x2013; {_change_breaks[5]:,.0f} big gain")
 )
-_leg_heat = (
-    "<h4>Tree + Income Screening Proxy</h4>"
-    + _lr("#ffffb2", f"&lt; {_heat_q[1]:.2f} lower")
-    + _lr("#fecc5c", f"{_heat_q[1]:.2f} &#x2013; {_heat_q[2]:.2f}")
-    + _lr("#fd8d3c", f"{_heat_q[2]:.2f} &#x2013; {_heat_q[3]:.2f}")
-    + _lr("#f03b20", f"{_heat_q[3]:.2f} &#x2013; {_heat_q[4]:.2f}")
-    + _lr("#bd0026", f"&gt; {_heat_q[4]:.2f} higher")
-)
-
 _legend_js = (
     "function updateLegend(n){"
-    "['leg-density','leg-income','leg-underserved','leg-change','leg-heat']"
+    "['leg-density','leg-income','leg-underserved','leg-change']"
     ".forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='none';});"
     "var s='leg-density';"
     "if(n.indexOf('Median Household Income')>=0)s='leg-income';"
     "else if(n.indexOf('Screening Score')>=0)s='leg-underserved';"
     "else if(n.indexOf('Change')>=0)s='leg-change';"
-    "else if(n.indexOf('Proxy')>=0)s='leg-heat';"
     "var el=document.getElementById(s);if(el)el.style.display='block';}"
     "window.__legendUpdate=updateLegend;"
     "window.addEventListener('message',function(msg){"
@@ -957,7 +922,6 @@ title_html = (
     "<div id='leg-income' style='display:none'>" + _leg_income + "</div>"
     "<div id='leg-underserved' style='display:none'>" + _leg_underserved + "</div>"
     "<div id='leg-change' style='display:none'>" + _leg_change + "</div>"
-    "<div id='leg-heat' style='display:none'>" + _leg_heat + "</div>"
     "</div>"
     "<script>window.__atlasLayerVars=" + json.dumps(_atlas_layer_vars) + ";</script>"
     "<script>" + _legend_js + "</script>"
