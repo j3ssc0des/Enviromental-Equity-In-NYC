@@ -292,7 +292,9 @@ if LIVE_DATA:
             gdf_with_nta["CENSUSAREA"], errors="coerce"
         ) * 2.589988110336
         nta_land = gdf_with_nta.groupby("nta_code", as_index=False)["land_km2"].sum(min_count=1)
-        gdf_boundaries = gdf_with_nta.dissolve(by="nta_code", aggfunc="first").reset_index()
+        gdf_boundaries = gdf_with_nta.drop(columns=["land_km2"]).dissolve(
+            by="nta_code", aggfunc="first"
+        ).reset_index()
         gdf_boundaries = gdf_boundaries.merge(nta_land, on="nta_code", how="left")
         gdf_boundaries = gdf_boundaries.set_crs("EPSG:4326", allow_override=True)
         print(f"   ✓ {len(gdf_boundaries)} NTA polygons assembled")
