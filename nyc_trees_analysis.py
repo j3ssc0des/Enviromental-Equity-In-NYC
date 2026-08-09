@@ -174,20 +174,23 @@ def _fetch(url, params=None, max_retries=3, timeout=40):
 def _fetch_acs_income():
     """Fetch the latest ACS five-year tract income from Census Reporter."""
     rows = []
-    for county in ("005", "047", "061", "081", "085"):
-        response = _fetch(
-            "https://api.censusreporter.org/1.0/data/show/latest",
-            params={"table_ids":"B19013,B11001", "geo_ids":f"140|05000US36{county}"},
-        )
-        payload=response.json()
-        release_year=int(str(payload["release"]["years"]).split("-")[-1])
-        for geoid,tables in payload["data"].items():
-            raw=geoid.replace("14000US","")
-            rows.append({"COUNTY":raw[2:5],"TRACT":raw[5:11],
-                "tract_income":tables["B19013"]["estimate"].get("B19013001"),
-                "tract_income_moe":tables["B19013"]["error"].get("B19013001"),
-                "households":tables["B11001"]["estimate"].get("B11001001"),
-                "income_source_year":release_year})
+    response = _fetch(
+        "https://api.censusreporter.org/1.0/data/show/latest",
+        params={"table_ids":"B19013,B11001", "geo_ids":"140|04000US36"},
+        timeout=90,
+    )
+    payload=response.json()
+    release_year=int(str(payload["release"]["years"]).split("-")[-1])
+    nyc_counties={"005","047","061","081","085"}
+    for geoid,tables in payload["data"].items():
+        raw=geoid.replace("14000US","")
+        if raw[2:5] not in nyc_counties:
+            continue
+        rows.append({"COUNTY":raw[2:5],"TRACT":raw[5:11],
+            "tract_income":tables["B19013"]["estimate"].get("B19013001"),
+            "tract_income_moe":tables["B19013"]["error"].get("B19013001"),
+            "households":tables["B11001"]["estimate"].get("B11001001"),
+            "income_source_year":release_year})
     acs = pd.DataFrame(rows)
     for col in ("tract_income", "tract_income_moe", "households"):
         acs[col] = pd.to_numeric(acs[col], errors="coerce")

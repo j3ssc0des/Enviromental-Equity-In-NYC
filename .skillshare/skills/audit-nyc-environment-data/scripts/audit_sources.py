@@ -19,7 +19,7 @@ def audit(source):
         payload=get_json(url)
     else:
         url=("https://api.censusreporter.org/1.0/data/show/latest?"
-             "table_ids=B19013%2CB11001&geo_ids=140%7C05000US36061")
+             "table_ids=B19013%2CB11001&geo_ids=140%7C04000US36")
         payload=get_json(url)
     if source["kind"]=="census_reporter":
         sample=next(iter(payload["data"].values()))
