@@ -244,13 +244,13 @@ if LIVE_DATA:
         print("\n📡 Fetching 2015 tree census from NYC Open Data…")
         r = _fetch(
             "https://data.cityofnewyork.us/resource/uvpi-gqnh.json",
-            params={"$select": "nta,boroname,COUNT(*) as trees",
-                    "$group":  "nta,boroname",
+            params={"$select": "nta,COUNT(*) as trees",
+                    "$group":  "nta",
                     "$where":  "nta IS NOT NULL",
                     "$limit":  "500"},
         )
         df15 = pd.DataFrame(r.json())
-        df15 = df15.rename(columns={"nta": "nta_code", "boroname": "boro_name"})
+        df15 = df15.rename(columns={"nta": "nta_code"})
         df15["trees_2015"] = pd.to_numeric(df15["trees"], errors="coerce").fillna(0).astype(int)
         df15 = df15[["nta_code", "trees_2015"]]
         print(f"   ✓ {df15['trees_2015'].sum():,.0f} trees · {len(df15)} NTAs")
