@@ -3,6 +3,9 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "17 11 * * 1"
+  workflow_dispatch:
 
 # Required for Pages deployment
 permissions:
@@ -31,16 +34,24 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: |
-          pip install pandas geopandas folium branca requests shapely numpy
+        run: pip install -r requirements.txt
+
+      - name: Audit upstream schemas
+        run: python3 .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
 
       - name: Generate map
+        env:
+          ALLOW_DEMO_DATA: "false"
         run: python3 nyc_trees_analysis.py
+
+      - name: Validate build
+        run: python3 scripts/validate_build.py
 
       - name: Stage site files
         run: |
           mkdir _site
           cp index.html nyc_trees_map.html _site/
+          cp -R assets docs data _site/
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

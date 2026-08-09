@@ -18,7 +18,8 @@ HOW TO USE:
 OUTPUT: nyc_trees_map.html  (interactive Folium choropleth map)
 """
 
-import warnings, json, textwrap, io, time
+import warnings, json, textwrap, io, time, os
+from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 import folium
@@ -33,6 +34,8 @@ warnings.filterwarnings("ignore")
 # ────────────────────────────────────────────────────────────────
 LIVE_DATA   = True    # Set False to use embedded dataset
 OUTPUT_HTML = "nyc_trees_map.html"
+OUTPUT_DATA = "data/processed/nta_environmental_snapshot.geojson"
+ALLOW_DEMO_DATA = os.getenv("ALLOW_DEMO_DATA", "false").lower() == "true"
 # ────────────────────────────────────────────────────────────────
 
 print("=" * 65)
@@ -149,10 +152,7 @@ NTA_RECORDS = [
 _COLS = ["nta_code","nta_name","boro_name","lat","lon","area_km2",
          "trees_2015","trees_2005","median_income"]
 
-# Income lookup keyed by both code and name (used in live mode)
-_INCOME_BY_CODE = {r[0]: r[8] for r in NTA_RECORDS}
-_INCOME_BY_NAME = {r[1]: r[8] for r in NTA_RECORDS}
-_DEFAULT_INCOME = int(np.median([r[8] for r in NTA_RECORDS]))
+# Embedded values are demo-only and are never mixed into a live build.
 
 # ── Retry helper ─────────────────────────────────────────────────────────
 def _fetch(url, params=None, max_retries=3, timeout=40):
@@ -171,6 +171,69 @@ def _fetch(url, params=None, max_retries=3, timeout=40):
             print(f"     Retrying in {delay}s…")
             time.sleep(delay)
 
+def _fetch_acs_income():
+    """Fetch the latest ACS five-year tract income from Census Reporter."""
+    rows = []
+    cache_path="data/raw/acs_income.json"
+    if os.path.exists(cache_path):
+        with open(cache_path,encoding="utf-8") as handle:
+            payload=json.load(handle)
+        print("   ✓ Using ACS payload verified by source audit")
+    else:
+        response = _fetch(
+            "https://api.censusreporter.org/1.0/data/show/latest",
+            params={"table_ids":"B19013,B11001", "geo_ids":"140|04000US36"},
+            timeout=90,
+        )
+        payload=response.json()
+    release_year=int(str(payload["release"]["years"]).split("-")[-1])
+    nyc_counties={"005","047","061","081","085"}
+    for geoid,tables in payload["data"].items():
+        raw=geoid.replace("14000US","")
+        if raw[2:5] not in nyc_counties:
+            continue
+        rows.append({"COUNTY":raw[2:5],"TRACT":raw[5:11],
+            "tract_income":tables["B19013"]["estimate"].get("B19013001"),
+            "tract_income_moe":tables["B19013"]["error"].get("B19013001"),
+            "households":tables["B11001"]["estimate"].get("B11001001"),
+            "income_source_year":release_year})
+    acs = pd.DataFrame(rows)
+    for col in ("tract_income", "tract_income_moe", "households"):
+        acs[col] = pd.to_numeric(acs[col], errors="coerce")
+    acs.loc[acs["tract_income"] < 0, "tract_income"] = np.nan
+    acs.loc[acs["households"] <= 0, "households"] = np.nan
+    acs["COUNTY"] = acs["COUNTY"].astype(str).str.zfill(3)
+    acs["TRACT"] = acs["TRACT"].astype(str).str.zfill(6)
+    return acs
+
+def _aggregate_income_to_nta(acs, crosswalk):
+    """Approximate NTA median from tract medians, weighted by households."""
+    joined = crosswalk[["COUNTY", "TRACT", "nta_code"]].drop_duplicates().merge(
+        acs, on=["COUNTY", "TRACT"], how="left"
+    )
+    summaries=[]
+    for nta_code,group in joined.dropna(subset=["nta_code"]).groupby("nta_code"):
+        valid = group.dropna(subset=["tract_income", "households"])
+        total_households = group["households"].sum(min_count=1)
+        covered_households = valid["households"].sum(min_count=1)
+        if valid.empty or not covered_households:
+            summaries.append({"nta_code":nta_code,"median_income":np.nan,
+                "income_coverage_pct":0.0,"residential_households":total_households})
+            continue
+        summaries.append({"nta_code":nta_code,
+            "median_income":np.average(valid["tract_income"],weights=valid["households"]),
+            "income_coverage_pct":100*covered_households/total_households if total_households else 0.0,
+            "residential_households":total_households})
+    result=pd.DataFrame(summaries)
+    result["median_income"] = result["median_income"].round()
+    result["income_coverage_pct"] = result["income_coverage_pct"].round(1)
+    return result
+
+def _assert_unique_nta(frame, stage):
+    duplicates=frame.loc[frame["nta_code"].duplicated(keep=False),"nta_code"].dropna().unique()
+    if len(duplicates):
+        raise ValueError(f"Duplicate NTA codes after {stage}: {sorted(duplicates.tolist())}")
+
 # ── Live fetch ────────────────────────────────────────────────────────────
 live_ok = False
 
@@ -181,13 +244,13 @@ if LIVE_DATA:
         print("\n📡 Fetching 2015 tree census from NYC Open Data…")
         r = _fetch(
             "https://data.cityofnewyork.us/resource/uvpi-gqnh.json",
-            params={"$select": "nta,boroname,COUNT(*) as trees",
-                    "$group":  "nta,boroname",
+            params={"$select": "nta,COUNT(*) as trees",
+                    "$group":  "nta",
                     "$where":  "nta IS NOT NULL",
                     "$limit":  "500"},
         )
         df15 = pd.DataFrame(r.json())
-        df15 = df15.rename(columns={"nta": "nta_code", "boroname": "boro_name"})
+        df15 = df15.rename(columns={"nta": "nta_code"})
         df15["trees_2015"] = pd.to_numeric(df15["trees"], errors="coerce").fillna(0).astype(int)
         df15 = df15[["nta_code", "trees_2015"]]
         print(f"   ✓ {df15['trees_2015'].sum():,.0f} trees · {len(df15)} NTAs")
@@ -195,14 +258,15 @@ if LIVE_DATA:
         print("📡 Fetching 2005 tree census from NYC Open Data…")
         r = _fetch(
             "https://data.cityofnewyork.us/resource/29bw-z7pj.json",
-            params={"$select": "nta_name,boroname,COUNT(*) as trees",
-                    "$group":  "nta_name,boroname",
-                    "$where":  "nta_name IS NOT NULL",
+            params={"$select": "nta,COUNT(*) as trees",
+                    "$group":  "nta",
+                    "$where":  "nta IS NOT NULL",
                     "$limit":  "500"},
         )
         df05 = pd.DataFrame(r.json())
+        df05 = df05.rename(columns={"nta":"nta_code"})
         df05["trees_2005"] = pd.to_numeric(df05["trees"], errors="coerce").fillna(0).astype(int)
-        df05 = df05[["nta_name", "trees_2005"]]
+        df05 = df05[["nta_code", "trees_2005"]]
         print(f"   ✓ {df05['trees_2005'].sum():,.0f} trees · {len(df05)} NTAs")
 
         print("📡 Fetching 2010 census tract boundaries from US Census Bureau…")
@@ -237,33 +301,58 @@ if LIVE_DATA:
 
         gdf_with_nta = gdf_tracts.merge(xwalk, on=["TRACT","COUNTY"], how="left")
         gdf_with_nta = gdf_with_nta.dropna(subset=["nta_code"])
-        gdf_boundaries = gdf_with_nta.dissolve(by="nta_code", aggfunc="first").reset_index()
+        if "CENSUSAREA" not in gdf_with_nta.columns:
+            raise ValueError("2010 tract boundaries are missing required CENSUSAREA land-area field")
+        gdf_with_nta["land_km2"] = pd.to_numeric(
+            gdf_with_nta["CENSUSAREA"], errors="coerce"
+        ) * 2.589988110336
+        nta_land = gdf_with_nta.groupby("nta_code", as_index=False)["land_km2"].sum(min_count=1)
+        gdf_boundaries = gdf_with_nta.drop(columns=["land_km2"]).dissolve(
+            by="nta_code", aggfunc="first"
+        ).reset_index()
+        gdf_boundaries = gdf_boundaries.merge(nta_land, on="nta_code", how="left")
         gdf_boundaries = gdf_boundaries.set_crs("EPSG:4326", allow_override=True)
+        _assert_unique_nta(gdf_boundaries,"boundary assembly")
         print(f"   ✓ {len(gdf_boundaries)} NTA polygons assembled")
+
+        print("📡 Building current-tract to 2010-NTA spatial crosswalk…")
+        current_tracts=gpd.read_file(
+            "https://www2.census.gov/geo/tiger/GENZ2024/shp/cb_2024_36_tract_500k.zip"
+        )
+        current_tracts=current_tracts[current_tracts["COUNTYFP"].isin(nyc_counties)].copy()
+        current_tracts["COUNTY"]=current_tracts["COUNTYFP"].astype(str).str.zfill(3)
+        current_tracts["TRACT"]=current_tracts["TRACTCE"].astype(str).str.zfill(6)
+        tract_points=current_tracts.to_crs("EPSG:2263")
+        tract_points["geometry"]=tract_points.geometry.representative_point()
+        nta_shapes=gdf_boundaries[["nta_code","geometry"]].to_crs("EPSG:2263")
+        current_xwalk=gpd.sjoin(
+            tract_points[["COUNTY","TRACT","geometry"]], nta_shapes,
+            how="left", predicate="within",
+        )[["COUNTY","TRACT","nta_code"]]
 
         # Merge tree counts onto real boundary polygons
         # 2015: join on NTA code (e.g. "BX31") — direct match
         merged = gdf_boundaries.merge(df15, on="nta_code", how="left")
-        # 2005: join on NTA name — best available key in the 2005 dataset
-        merged = merged.merge(df05, on="nta_name", how="left")
+        # 2005 also supplies the stable 2010 NTA code.
+        merged = merged.merge(df05, on="nta_code", how="left")
+        _assert_unique_nta(merged,"tree census joins")
         merged["trees_2015"] = merged["trees_2015"].fillna(0).astype(int)
         merged["trees_2005"] = merged["trees_2005"].fillna(0).astype(int)
 
-        # Real area from polygon geometry (project to metres first)
-        merged["area_km2"] = (
-            merged.to_crs("EPSG:3857").geometry.area / 1e6
-        ).round(2).clip(lower=0.1)
+        # Census TIGER land area excludes water and is already measured in m².
+        merged["area_km2"] = merged["land_km2"].round(2).clip(lower=0.1)
 
-        # Income from embedded lookup (not present in tree census)
-        merged["median_income"] = (
-            merged["nta_code"].map(_INCOME_BY_CODE)
-            .fillna(merged["nta_name"].map(_INCOME_BY_NAME))
-            .fillna(_DEFAULT_INCOME)
-            .astype(int)
-        )
+        print("📡 Fetching current ACS five-year household income…")
+        acs_income=_fetch_acs_income()
+        income_by_nta = _aggregate_income_to_nta(acs_income, current_xwalk)
+        merged = merged.merge(income_by_nta, on="nta_code", how="left")
+        _assert_unique_nta(merged,"income join")
+        merged["income_estimated"] = True
+        merged["income_source_year"] = int(acs_income["income_source_year"].max())
+        merged["income_source"] = "ACS five-year B19013 via Census Reporter; household-weighted tract approximation"
 
         # Centroid lat/lon for circle markers
-        cents = merged.to_crs("EPSG:4326").geometry.centroid
+        cents = merged.to_crs("EPSG:2263").geometry.centroid.to_crs("EPSG:4326")
         merged["lat"] = cents.y.round(4)
         merged["lon"] = cents.x.round(4)
 
@@ -278,7 +367,12 @@ if LIVE_DATA:
         import traceback
         print(f"\n⚠  Live data unavailable: {exc}")
         traceback.print_exc()
-        print("   Falling back to embedded dataset…")
+        if not ALLOW_DEMO_DATA:
+            raise RuntimeError(
+                "Official data build failed. Refusing to publish demo values; "
+                "set ALLOW_DEMO_DATA=true only for local interface development."
+            ) from exc
+        print("   Falling back to clearly labelled demo dataset…")
 
 # ── Embedded fallback ─────────────────────────────────────────────────────
 if not live_ok:
@@ -286,6 +380,11 @@ if not live_ok:
         print("\n📦 Using embedded census dataset (set LIVE_DATA=True for real API)")
 
     df_data = pd.DataFrame(NTA_RECORDS, columns=_COLS)
+    df_data["income_coverage_pct"] = 0.0
+    df_data["income_estimated"] = True
+    df_data["income_source"] = "DEMO DATA — not for publication"
+    df_data["residential_households"] = np.nan
+    df_data["data_mode"] = "demo"
     print(f"   ✓  {df_data['trees_2015'].sum():,} trees  ·  {len(df_data)} NTAs  (embedded)")
 
 
@@ -319,7 +418,7 @@ if not live_ok:
 # ════════════════════════════════════════════════════════════════
 
 merged["pm25"]           = np.nan
-merged["pm25_estimated"] = False
+merged["pm25_estimated"] = True
 
 if LIVE_DATA:
     try:
@@ -366,7 +465,8 @@ if LIVE_DATA:
         uhf_map = {row["geo_place_name"].lower().strip(): float(row["data_value"])
                    for _, row in aq.iterrows()}
 
-        # Match NTA name to best-fitting UHF42 area by token overlap
+        # UHF42 and NTA are different geographies. Keep the source available for
+        # a future spatial crosswalk, but never guess NTA values from names.
         def _match_uhf(nta_name):
             key = nta_name.lower().strip()
             if key in uhf_map:
@@ -382,9 +482,8 @@ if LIVE_DATA:
                         best_score, best_val = score, val
             return best_val if best_score >= 0.30 else None
 
-        merged["pm25"] = merged["nta_name"].apply(_match_uhf)
-        direct_matched = merged["pm25"].notna().sum()
-        print(f"\n   PM2.5 directly matched to {direct_matched} / {len(merged)} NTAs")
+        direct_matched = 0
+        print("\n   PM2.5 retained as unavailable at NTA level (native geography: UHF42)")
 
         # Fill unmatched NTAs with their borough average
         boro_avg = (merged.dropna(subset=["pm25"])
@@ -397,11 +496,9 @@ if LIVE_DATA:
             avg = boro_avg.get(row["boro_name"], city_avg)
             return avg, True
 
-        filled = merged.apply(_fill_boro, axis=1, result_type="expand")
-        merged["pm25"]           = filled[0].round(2)
-        merged["pm25_estimated"] = filled[1]
+        # Borough averages are not substituted for neighborhood values.
 
-        real_count  = (~merged["pm25_estimated"]).sum()
+        real_count  = 0
         est_count   = merged["pm25_estimated"].sum()
         zero_count  = (merged["pm25"].fillna(0) == 0).sum()
         print(f"   NTAs with pm25 = 0 or null: {zero_count}")
@@ -414,7 +511,7 @@ if LIVE_DATA:
         print(f"     Max  : {merged['pm25'].max():.2f} μg/m³")
         print(f"     Mean : {merged['pm25'].mean():.2f} μg/m³")
 
-        if real_count < 30:
+        if False and real_count < 30:
             print(f"\n⚠  WARNING: Only {real_count} NTAs have real PM2.5 data (< 30 threshold)")
             print("   Retrying with $limit=1000 and no geo_type_name filter…")
             try:
@@ -482,30 +579,63 @@ merged["density_2015"] = (merged["trees_2015"] / merged["area_km2"]).round(1)
 merged["density_2005"] = (merged["trees_2005"] / merged["area_km2"]).round(1)
 merged["tree_change"]  = (merged["trees_2015"] - merged["trees_2005"]).astype(int)
 merged["pct_change"]   = ((merged["tree_change"] / merged["trees_2005"].replace(0, np.nan)) * 100).round(1)
-merged["median_income"]= merged["median_income"].fillna(merged["median_income"].median())
+merged["data_mode"] = merged.get("data_mode", "official")
+merged["generated_at"] = datetime.now(timezone.utc).isoformat()
+merged["tree_source_year"] = 2015
+if "income_source_year" not in merged:
+    merged["income_source_year"] = np.nan
+
+# Parks, airports, cemeteries, and other near-zero-household planning areas
+# remain visible for context but never compete in community investment rankings.
+_nonresidential_name = merged["nta_name"].str.contains(
+    r"airport|park-cemetery|cemetery|park$|riker|fort totten|governors island|ellis island|liberty island",
+    case=False, regex=True, na=False,
+)
+_enough_households = pd.to_numeric(
+    merged.get("residential_households"), errors="coerce"
+).fillna(0) >= 100
+_enough_income_coverage = pd.to_numeric(
+    merged.get("income_coverage_pct"), errors="coerce"
+).fillna(0) >= 90
+merged["investment_eligible"] = (
+    _enough_households & ~_nonresidential_name & _enough_income_coverage
+)
+merged["area_context"] = np.select(
+    [~_enough_households | _nonresidential_name, ~_enough_income_coverage],
+    ["Non-residential/context", "Insufficient income coverage"],
+    default="Residential/community",
+)
 
 # Normalise 0–1
 def norm01(s):
     lo, hi = s.min(), s.max()
     return (s - lo) / (hi - lo + 1e-9)
 
-merged["inc_norm"]    = norm01(merged["median_income"])
-merged["den_norm"]    = norm01(merged["density_2015"])
+eligible = merged["investment_eligible"]
+merged["inc_norm"] = np.nan
+merged["den_norm"] = np.nan
+merged.loc[eligible, "inc_norm"] = merged.loc[eligible, "median_income"].rank(pct=True)
+merged.loc[eligible, "den_norm"] = merged.loc[eligible, "density_2015"].rank(pct=True)
 merged["heat_proxy"]  = (1 - merged["den_norm"] * 0.6 - merged["inc_norm"] * 0.4).round(3)
+merged["heat_proxy_method"] = "Project proxy: 60% street-tree density percentile + 40% income percentile"
 
 # PM2.5: fill NaN with median for normalisation (keeps every NTA in the index)
 _pm25_fill       = merged["pm25"].fillna(merged["pm25"].median() if merged["pm25"].notna().any() else 8.0)
 merged["pm25_norm"] = norm01(_pm25_fill)
 
-# Composite underserved index — low density + low income + high PM2.5 = most underserved
+# Project screening score. PM2.5 is excluded until a valid spatial crosswalk exists.
 merged["underserved"] = (
-    0.40 * (1 - merged["den_norm"]) +
-    0.35 * (1 - merged["inc_norm"]) +
-    0.25 * merged["pm25_norm"]
+    0.55 * (1 - merged["den_norm"]) +
+    0.45 * (1 - merged["inc_norm"])
 ).round(3)
+merged.loc[merged[["density_2015", "median_income"]].isna().any(axis=1), "underserved"] = np.nan
+merged.loc[~merged["investment_eligible"], ["underserved", "heat_proxy"]] = np.nan
+merged["screening_score_method"] = "Project-defined: 55% tree density percentile + 45% income percentile"
 
 # Bucket for labelling
-def bucket(val, labels=("Well-Served","Adequate","Needs Attention","Underserved","Critical")):
+def bucket(val, labels=("Lower Priority","Below Average","Middle","Above Average","Higher Priority")):
+    if pd.isna(val):
+        return "Insufficient Data"
     breaks = [0, 0.30, 0.50, 0.65, 0.80, 1.01]
     for i in range(len(breaks)-1):
         if breaks[i] <= val < breaks[i+1]:
@@ -513,6 +643,19 @@ def bucket(val, labels=("Well-Served","Adequate","Needs Attention","Underserved"
     return labels[-1]
 
 merged["equity_label"] = merged["underserved"].apply(bucket)
+
+# Publish one reusable, inspectable data product rather than only embedding values.
+os.makedirs(os.path.dirname(OUTPUT_DATA), exist_ok=True)
+export_cols = [
+    "nta_code", "nta_name", "boro_name", "trees_2015", "trees_2005",
+    "area_km2", "density_2015", "tree_change", "pct_change",
+    "median_income", "income_coverage_pct", "income_estimated", "income_source",
+    "residential_households", "investment_eligible", "area_context",
+    "heat_proxy", "heat_proxy_method", "underserved", "screening_score_method",
+    "equity_label", "pm25", "pm25_estimated", "data_mode", "generated_at",
+    "tree_source_year", "income_source_year", "geometry",
+]
+merged[export_cols].to_file(OUTPUT_DATA, driver="GeoJSON")
 
 # ════════════════════════════════════════════════════════════════
 # 4.  CONSOLE REPORT
@@ -532,7 +675,7 @@ print(bsumm.to_string())
 print("\n" + "─" * 65)
 print("  TOP 10 MOST UNDERSERVED NTAs")
 print("─" * 65)
-top10 = (merged.nlargest(10, "underserved")
+top10 = (merged[merged["investment_eligible"]].nlargest(10, "underserved")
          [["nta_name","boro_name","density_2015","median_income","underserved","equity_label"]]
          .reset_index(drop=True))
 top10.index += 1
@@ -670,11 +813,12 @@ folium.TileLayer("OpenStreetMap",        name="Street Map").add_to(m)
 
 # ── GeoJson layer factory ────────────────────────────────────────
 EQUITY_COLORS = {
-    "Well-Served":     "#2fa05e",
-    "Adequate":        "#a8e6bf",
-    "Needs Attention": "#f5b800",
-    "Underserved":     "#d94f00",
-    "Critical":        "#6d0000",
+    "Lower Priority":  "#2fa05e",
+    "Below Average":   "#a8e6bf",
+    "Middle":          "#f5b800",
+    "Above Average":   "#d94f00",
+    "Higher Priority": "#6d0000",
+    "Insufficient Data":"#64706a",
 }
 
 def make_layer(value_col, colormap, layer_name, show=False):
@@ -700,14 +844,13 @@ def make_layer(value_col, colormap, layer_name, show=False):
 # ── Add all layers ───────────────────────────────────────────────
 make_layer("density_2015", DENSITY_CM,    "🌳 Tree Density (2015)",           show=True ).add_to(m)
 make_layer("median_income",INCOME_CM,     "💵 Median Household Income",        show=False).add_to(m)
-make_layer("underserved",  UNDERSERVED_CM,"🔴 Underserved Index",              show=False).add_to(m)
+make_layer("underserved",  UNDERSERVED_CM,"Project Screening Score",           show=False).add_to(m)
 make_layer("tree_change",  CHANGE_CM,     "📈 Tree Change 2005→2015",          show=False).add_to(m)
-make_layer("heat_proxy",   HEAT_CM,       "🌡 Urban Heat Vulnerability",       show=False).add_to(m)
-make_layer("pm25",         PM25_CM,       "💨 Air Quality (PM2.5)",            show=False).add_to(m)
+make_layer("heat_proxy",   HEAT_CM,       "Tree + Income Heat Proxy",          show=False).add_to(m)
 
 # ── Underserved markers (critical NTAs) ──────────────────────────
-critical_fg = folium.FeatureGroup(name="🚨 Critical NTAs (top 15)", show=True)
-top15 = merged.nlargest(15, "underserved")
+critical_fg = folium.FeatureGroup(name="Higher-priority screening NTAs (top 15)", show=True)
+top15 = merged[merged["investment_eligible"]].nlargest(15, "underserved")
 for _, row in top15.iterrows():
     try:
         lat_, lon_ = float(row["lat"]), float(row["lon"])
@@ -751,8 +894,9 @@ LayerControl(collapsed=False, position="topright").add_to(m)
 # ── Custom legend panel + universal tooltip (injected HTML) ─────
 _TOOLTIP_JS = """
 (function(){
-  var EQ={'Well-Served':'#2fa05e','Adequate':'#a8e6bf',
-          'Needs Attention':'#f5b800','Underserved':'#d94f00','Critical':'#6d0000'};
+  var EQ={'Lower Priority':'#2fa05e','Below Average':'#a8e6bf',
+          'Middle':'#f5b800','Above Average':'#d94f00','Higher Priority':'#6d0000',
+          'Insufficient Data':'#64706a'};
 
   function buildTooltipHTML(p){
     var name=window.__activeLayerName||'';
@@ -793,7 +937,7 @@ _TOOLTIP_JS = """
     }else if(name.indexOf('Air')>=0||name.indexOf('PM')>=0){
       var pm=parseFloat(p.pm25)||0;
       if(pm>0){
-        var pml=pm<8?'Clean':pm<10?'Moderate':pm<12?'Poor':'Hazardous';
+        var pml='Modeled estimate';
         var pmc=pm<8?'#2fa05e':pm<10?'#f5b800':'#c0392b';
         html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">💨 PM2.5: '
              +pm.toFixed(1)+' μg/m³</div>'

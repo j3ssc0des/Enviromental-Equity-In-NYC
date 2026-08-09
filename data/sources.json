@@ -1,0 +1,10 @@
+[
+  {"id":"uvpi-gqnh","name":"2015 Street Tree Census","kind":"socrata","required_fields":["tree_id","nta","boroname"],"reference_year":2015,"status":"active"},
+  {"id":"29bw-z7pj","name":"2005 Street Tree Census","kind":"socrata","required_fields":["nta_name","boroname"],"reference_year":2005,"status":"active"},
+  {"id":"8ius-dhrr","name":"2010 tract-to-NTA crosswalk","kind":"socrata","required_fields":["neighborhood_tabulation_area_nta_code","_2010_census_tract"],"reference_year":2010,"status":"active"},
+  {"id":"c3uy-2p5r","name":"Environment and Health indicators","kind":"socrata","required_fields":["name","geo_type_name","data_value","time_period"],"status":"catalogued"},
+  {"id":"4mhf-duep","name":"Heat Vulnerability Index Rankings","kind":"socrata","required_fields":["zcta20","hvi"],"status":"next"},
+  {"id":"mrjc-v9pm","name":"NYC Flood Vulnerability Index","kind":"socrata","required_fields":["geoid"],"status":"next"},
+  {"id":"by9k-vhck","name":"Tree Canopy Change 2010–2017","kind":"socrata","required_fields":[],"status":"next"},
+  {"id":"census-reporter-acs5","name":"Current ACS five-year income","kind":"census_reporter","required_fields":["B19013001","B11001001"],"status":"active"}
+]

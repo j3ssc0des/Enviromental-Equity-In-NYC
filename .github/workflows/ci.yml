@@ -1,0 +1,49 @@
+name: Validate site and data
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install pinned application dependencies
+        run: pip install -r requirements.txt
+      - name: Compile Python
+        run: python -m py_compile nyc_trees_analysis.py scripts/validate_build.py .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
+      - name: Audit upstream schemas
+        run: python .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
+      - name: Build with official data only
+        env:
+          ALLOW_DEMO_DATA: "false"
+        run: python nyc_trees_analysis.py
+      - name: Validate generated data and UI claims
+        run: python scripts/validate_build.py
+      - name: Check generated files
+        run: test -s nyc_trees_map.html && test -s data/processed/nta_environmental_snapshot.geojson
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validated-site-${{ github.sha }}
+          path: |
+            index.html
+            nyc_trees_map.html
+            assets/
+            docs/
+            data/
+          retention-days: 14
