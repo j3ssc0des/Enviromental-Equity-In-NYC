@@ -180,6 +180,11 @@
     }
     .mtab:hover  { color: var(--text); border-color: var(--muted); }
     .mtab.active { color: var(--green); border-color: var(--green); background: var(--green-lo); }
+    .wave-switch { display: flex; align-items: center; gap: 5px; margin: 0 0 14px; padding: 7px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; }
+    .wave-label { margin-right: auto; font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+    .wave-btn { font-family: var(--mono); font-size: 0.57rem; letter-spacing: 0.04em; color: var(--muted); background: transparent; border: 1px solid var(--border); border-radius: 3px; padding: 4px 6px; cursor: pointer; }
+    .wave-btn:hover, .wave-btn:focus-visible { color: var(--text); border-color: var(--muted); outline: none; }
+    .wave-btn.active { color: var(--green); border-color: var(--green); background: var(--green-lo); }
 
     .panel-body {
       flex: 1; overflow-y: auto; padding: 16px;
@@ -496,14 +501,19 @@
 
             <!-- TREES TAB PANEL -->
             <div class="tab-panel active" id="tp-trees">
+              <div class="wave-switch" role="group" aria-label="Tree census wave">
+                <span class="wave-label">Census wave</span>
+                <button class="wave-btn" data-tree-wave="2005" type="button">2005–06</button>
+                <button class="wave-btn active" data-tree-wave="2015" type="button">2015–16</button>
+              </div>
               <div class="hero-stat">
-                <div class="hero-num" id="tp-trees-2015"></div>
-                <div class="hero-label">Street trees from the 2015 census</div>
+                <div class="hero-num" id="tp-trees-count"></div>
+                <div class="hero-label" id="tp-trees-wave-label">Street trees from the 2015–16 census wave</div>
               </div>
               <div class="sec-stats">
                 <div class="sec-box">
-                  <div class="sec-label">Trees 2005</div>
-                  <div class="sec-val neutral" id="tp-trees-2005"></div>
+                  <div class="sec-label" id="tp-trees-other-label">2005–06 trees</div>
+                  <div class="sec-val neutral" id="tp-trees-other"></div>
                 </div>
                 <div class="sec-box">
                   <div class="sec-label">Change</div>
@@ -552,7 +562,7 @@
             <div class="tab-panel" id="tp-equity">
               <div class="hero-stat">
                 <div class="hero-num" id="tp-score-big"></div>
-                <div class="hero-label">Project screening score: trees 55% + income 45%</div>
+                <div class="hero-label">Project screening score: lower tree density 55% + lower income 45%</div>
               </div>
               <div id="tp-score-details"></div>
             </div>
@@ -670,6 +680,7 @@ let boroughBuilt = false;
 let screeningBuilt = false;
 let currentNeighborhood = null;
 let currentMetric = 'trees';
+let currentTreeWave = '2015';
 const NON_RESIDENTIAL_NAME = /airport|park-cemetery|cemetery|park$|riker|fort totten|governors island|ellis island|liberty island/i;
 
 function isInvestmentEligible(d) {
@@ -688,12 +699,14 @@ function median(values) {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-function currentReferences() {
+function currentReferences(treeWave = currentTreeWave) {
   const rows = eligibleNeighborhoods();
-  const totalTrees = rows.reduce((sum,d) => sum + (Number(d.trees_2015) || 0), 0);
+  const treeField = treeWave === '2005' ? 'trees_2005' : 'trees_2015';
+  const totalTrees = rows.reduce((sum,d) => sum + (Number(d[treeField]) || 0), 0);
   const totalArea = rows.reduce((sum,d) => sum + (Number(d.area_km2) || 0), 0);
   return {
     rows,
+    treeWave,
     density: totalArea > 0 ? totalTrees / totalArea : 0,
     income: median(rows.map(d => Number(d.median_income))),
   };
@@ -751,9 +764,12 @@ function updatePanel(p) {
   const eligible = isInvestmentEligible(p);
   const label  = eligible ? (p.equity_label || 'Middle') : 'Insufficient Data';
   const colors = EQ[label] || EQ['Middle'];
-  const trees  = parseInt(p.trees_2015)  || 0;
-  const trees5 = parseInt(p.trees_2005)  || 0;
-  const dens   = parseFloat(p.density_2015) || 0;
+  const waveField = currentTreeWave === '2005' ? 'trees_2005' : 'trees_2015';
+  const waveDensityField = currentTreeWave === '2005' ? 'density_2005' : 'density_2015';
+  const otherWaveField = currentTreeWave === '2005' ? 'trees_2015' : 'trees_2005';
+  const trees  = parseInt(p[waveField]) || 0;
+  const otherTrees = parseInt(p[otherWaveField]) || 0;
+  const dens   = parseFloat(p[waveDensityField]) || 0;
   const incomeValue = p.median_income == null ? NaN : Number(p.median_income);
   const income = Number.isFinite(incomeValue) ? Math.round(incomeValue) : null;
   const change = parseInt(p.tree_change)    || 0;
@@ -771,8 +787,15 @@ function updatePanel(p) {
   badge.style.cssText = `background:${colors.bg};border:1px solid ${colors.border};color:${colors.text}`;
 
   // ── TREES PANEL ───────────────────────────────────────────
-  document.getElementById('tp-trees-2015').textContent = trees.toLocaleString();
-  document.getElementById('tp-trees-2005').textContent = trees5.toLocaleString();
+  document.getElementById('tp-trees-count').textContent = trees.toLocaleString();
+  document.getElementById('tp-trees-wave-label').textContent = currentTreeWave === '2005'
+    ? 'Street trees from the 2005–06 census wave'
+    : 'Street trees from the 2015–16 census wave';
+  document.getElementById('tp-trees-other').textContent = otherTrees.toLocaleString();
+  document.getElementById('tp-trees-other-label').textContent = `${currentTreeWave === '2005' ? '2015–16' : '2005–06'} trees`;
+  document.querySelectorAll('[data-tree-wave]').forEach(button => {
+    button.classList.toggle('active', button.dataset.treeWave === currentTreeWave);
+  });
   const chEl = document.getElementById('tp-change');
   const arrow = change >= 0 ? '↑' : '↓';
   chEl.innerHTML = `<span class="change-arrow">${arrow}</span>${Math.abs(change).toLocaleString()}`;
@@ -851,6 +874,18 @@ function openNeighborhood(p, shouldZoom) {
   }
 }
 
+function setTreeWave(wave) {
+  if (wave !== '2005' && wave !== '2015') return;
+  currentTreeWave = wave;
+  const frame = document.getElementById('map-frame');
+  if (frame && frame.contentWindow && currentMetric === 'trees') {
+    ['Tree Density (2015)', 'Tree Density (2005)', 'Median Household Income', 'Project Screening Score'].forEach(name =>
+      frame.contentWindow.postMessage({type:'toggle_layer', name, show:name === `Tree Density (${wave})`}, '*')
+    );
+  }
+  if (currentNeighborhood) updatePanel(currentNeighborhood);
+}
+
 /* ── METRIC TAB SWITCH (inside right panel) ────────────────── */
 function switchMetricTab(tabKey) {
   currentMetric = tabKey;
@@ -866,7 +901,7 @@ function switchMetricTab(tabKey) {
   if (tp) tp.classList.add('active');
 
   const metricLayers = {
-    trees:'Tree Density (2015)',
+    trees:`Tree Density (${currentTreeWave})`,
     income:'Median Household Income',
     equity:'Project Screening Score',
   };
@@ -1194,7 +1229,7 @@ function buildFindings() {
   if (priority) document.getElementById('finding-priority').textContent =
     `${priority.nta_name} currently tops the project screening score. That makes it a smart place to investigate next, not an automatic funding verdict.`;
   if (comeback) document.getElementById('finding-change').textContent =
-    `${comeback.nta_name} posted the biggest street-tree gain, adding ${Math.round(Number(comeback.tree_change)).toLocaleString()} trees between the 2005 and 2015 censuses. A proper tree comeback.`;
+    `${comeback.nta_name} posted the biggest street-tree gain, adding ${Math.round(Number(comeback.tree_change)).toLocaleString()} trees between the 2005–06 and 2015–16 census waves. A proper tree comeback.`;
   document.getElementById('finding-guardrail').textContent =
     `${excluded} non-residential or low-coverage areas stay visible but sit out the rankings. Airports and cemeteries do not get to compete with communities.`;
 }
@@ -1344,6 +1379,10 @@ document.querySelectorAll('.mtab').forEach(function(btn) {
     this.setAttribute('aria-selected', 'true');
     switchMetricTab(this.dataset.tab);
   });
+});
+
+document.querySelectorAll('[data-tree-wave]').forEach(function(btn) {
+  btn.addEventListener('click', function() { setTreeWave(this.dataset.treeWave); });
 });
 </script>
 </body>

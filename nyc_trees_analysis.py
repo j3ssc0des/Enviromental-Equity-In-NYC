@@ -501,7 +501,7 @@ merged["equity_label"] = merged["underserved"].apply(bucket)
 os.makedirs(os.path.dirname(OUTPUT_DATA), exist_ok=True)
 export_cols = [
     "nta_code", "nta_name", "boro_name", "trees_2015", "trees_2005",
-    "area_km2", "density_2015", "tree_change", "pct_change",
+    "area_km2", "density_2005", "density_2015", "tree_change", "pct_change",
     "median_income", "income_coverage_pct", "income_estimated", "income_source",
     "residential_households", "investment_eligible", "area_context",
     "underserved", "screening_score_method",
@@ -564,8 +564,12 @@ def _ensure_breaks(breaks):
 
 # TREE DENSITY: 5-step green (quantile breakpoints)
 _density_colors = ["#edf8e9", "#bae4b3", "#74c476", "#31a354", "#006d2c"]
+_density_values = pd.concat([
+    merged.loc[merged["investment_eligible"], "density_2005"],
+    merged.loc[merged["investment_eligible"], "density_2015"],
+]).dropna()
 _density_q = _ensure_breaks(
-    [float(merged["density_2015"].quantile(q)) for q in [0, 0.2, 0.4, 0.6, 0.8, 1.0]]
+    [float(_density_values.quantile(q)) for q in [0, 0.2, 0.4, 0.6, 0.8, 1.0]]
 )
 DENSITY_CM = StepColormap(
     colors=_density_colors, index=_density_q,
@@ -666,16 +670,18 @@ def make_layer(value_col, colormap, layer_name, show=False):
     return fg
 
 # ── Add all layers ───────────────────────────────────────────────
-tree_density_layer = make_layer("density_2015", DENSITY_CM, "Tree Density (2015)", show=True)
+tree_density_2015_layer = make_layer("density_2015", DENSITY_CM, "Tree Density (2015)", show=True)
+tree_density_2005_layer = make_layer("density_2005", DENSITY_CM, "Tree Density (2005)", show=False)
 income_layer = make_layer("median_income", INCOME_CM, "Median Household Income", show=False)
 screening_layer = make_layer("underserved", UNDERSERVED_CM, "Project Screening Score", show=False)
 tree_change_layer = make_layer("tree_change", CHANGE_CM, "Tree Change 2005→2015", show=False)
 
-for atlas_layer in (tree_density_layer, income_layer, screening_layer, tree_change_layer):
+for atlas_layer in (tree_density_2015_layer, tree_density_2005_layer, income_layer, screening_layer, tree_change_layer):
     atlas_layer.add_to(m)
 
 _atlas_layer_vars = {
-    "Tree Density (2015)": tree_density_layer.get_name(),
+    "Tree Density (2015)": tree_density_2015_layer.get_name(),
+    "Tree Density (2005)": tree_density_2005_layer.get_name(),
     "Median Household Income": income_layer.get_name(),
     "Project Screening Score": screening_layer.get_name(),
     "Tree Change 2005→2015": tree_change_layer.get_name(),
@@ -738,8 +744,10 @@ _TOOLTIP_JS = """
       +'<b style="font-size:13px;color:#e8f0e8;display:block;margin-bottom:5px">'
       +(p.nta_name||'')+'</b>';
     if(name.indexOf('Tree Density')>=0){
-      var dens=Math.round(parseFloat(p.density_2015)||0).toLocaleString();
-      html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">'+dens+' street trees/km²</div>'
+      var treeYear=name.indexOf('(2005)')>=0?'2005':'2015';
+      var densityField=treeYear==='2005'?'density_2005':'density_2015';
+      var dens=Math.round(parseFloat(p[densityField])||0).toLocaleString();
+      html+='<div style="color:#b0cbb0;font-size:11px;margin-bottom:4px">'+dens+' street trees/km² ('+treeYear+')</div>'
            +'<span style="background:'+(EQ[p.equity_label]||'#888')
            +';color:#fff;padding:2px 8px;border-radius:3px;font-size:10px">'
            +(p.equity_label||'')+'</span>';
