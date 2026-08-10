@@ -20,6 +20,7 @@ else:
     eligible=[p for p in props if p.get("investment_eligible") is True]
     if not eligible: errors.append("no investment-eligible residential NTAs found")
     if any(p.get("median_income") is None for p in eligible): errors.append("eligible NTA lacks income")
+    if any(p.get("density_2005") is None for p in props): errors.append("NTA lacks derived 2005 tree density")
     eligible_coverage=[p.get("income_coverage_pct",0) or 0 for p in eligible]
     if eligible_coverage and min(eligible_coverage)<90: errors.append(f"eligible income coverage below 90%: {min(eligible_coverage)}")
     nonres=[p for p in props if p.get("investment_eligible") is False]

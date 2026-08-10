@@ -20,13 +20,20 @@ const references = {
 test('tree interpretation compares conditions, describes history, and states scope', () => {
   const row = eligible.find(item => item.nta_code === 'BK93');
   const result = buildInterpretation(row, 'trees', references);
-  assert.match(result.text, /Starrett City’s street-tree density is/);
-  assert.match(result.text, /between 2005 and 2015/);
+  assert.match(result.text, /Starrett City’s street-tree density in the 2015–16 census wave is/);
+  assert.match(result.text, /between the 2005–06 and 2015–16 census waves/);
   assert.match(result.text, /do not include total canopy/);
   assert.deepEqual(result.sources.map(source => source.label), [
     'NYC Street Tree Census 2015',
     'NYC Street Tree Census 2005',
   ]);
+});
+
+test('tree interpretation follows the selected historical census wave', () => {
+  const row = eligible.find(item => item.nta_code === 'BK93');
+  const historicalReferences = { ...references, treeWave: '2005', density: eligible.reduce((sum, item) => sum + item.density_2005 * item.area_km2, 0) / eligible.reduce((sum, item) => sum + item.area_km2, 0) };
+  const result = buildInterpretation(row, 'trees', historicalReferences);
+  assert.match(result.text, /2005–06 census wave/);
 });
 
 test('income interpretation distinguishes context from explanation', () => {

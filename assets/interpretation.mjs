@@ -30,9 +30,9 @@ function historicalDirection(properties) {
   const change = finite(properties.tree_change);
   const percent = finite(properties.pct_change);
   if (change === null || percent === null) return 'The historical change is unavailable.';
-  if (Math.abs(percent) < 5) return 'The recorded count changed little between 2005 and 2015.';
+  if (Math.abs(percent) < 5) return 'The recorded count changed little between the 2005–06 and 2015–16 census waves.';
   const strength = Math.abs(percent) >= 25 ? 'substantially ' : '';
-  return `The recorded count ${change > 0 ? 'rose' : 'fell'} ${strength}between 2005 and 2015.`;
+  return `The recorded count ${change > 0 ? 'rose' : 'fell'} ${strength}between the 2005–06 and 2015–16 census waves.`;
 }
 
 function scorePosition(value) {
@@ -69,7 +69,9 @@ export function buildInterpretation(properties, metric, references = {}) {
     return { text: contextOnlyInterpretation(p), sources: [] };
   }
 
-  const densityPosition = comparison(p.density_2015, references.density);
+  const treeWave = references.treeWave === '2005' ? '2005–06' : '2015–16';
+  const densityField = references.treeWave === '2005' ? 'density_2005' : 'density_2015';
+  const densityPosition = comparison(p[densityField], references.density);
   const incomePosition = comparison(p.median_income, references.income);
 
   if (metric === 'income') {
@@ -90,7 +92,7 @@ export function buildInterpretation(properties, metric, references = {}) {
   }
 
   return {
-    text: `${name}’s street-tree density is ${densityPosition} the ranked-area average. ${historicalDirection(p)} Street-tree census counts do not include total canopy, park trees, or private-property trees.`,
+    text: `${name}’s street-tree density in the ${treeWave} census wave is ${densityPosition} the ranked-area average. ${historicalDirection(p)} Street-tree census counts do not include total canopy, park trees, or private-property trees.`,
     sources: [TREE_2015_SOURCE, TREE_2005_SOURCE],
   };
 }

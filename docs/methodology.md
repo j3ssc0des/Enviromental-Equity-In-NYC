@@ -4,11 +4,11 @@ This site is an environmental screening and exploration tool. It is not a risk a
 
 ## Core geography
 
-The current map uses 2010 Neighborhood Tabulation Areas (NTAs) because the 2005 and 2015 Street Tree Census products align most closely with that geography. Every metric must retain its native geography and reference year. Data converted to an NTA is marked as estimated and documents the conversion method.
+The current map uses 2010 Neighborhood Tabulation Areas (NTAs) because the 2005–06 and 2015–16 Street Tree Census products align most closely with that geography. Every metric must retain its native geography and reference year. Data converted to an NTA is marked as estimated and documents the conversion method.
 
 ## Street trees
 
-Tree counts come from the NYC Parks 2005 and 2015 Street Tree Censuses. Density is count divided by land area, not total polygon area. Street-tree counts do not represent park trees, private trees, forest, wetlands, or total canopy.
+Tree counts come from the NYC Parks 2005–06 and 2015–16 Street Tree Censuses. The interface lets you switch the active census wave while retaining the same NTA geography. Density is count divided by land area, not total polygon area. Street-tree counts do not represent park trees, private trees, forest, wetlands, or total canopy.
 
 The official 2005 file contains 592,372 records with a non-null NTA field, but 24,027 of those records contain only a blank code. The project maps 568,345 records to valid NTAs, or 95.9% coverage. Blank-code records are excluded from neighborhood change rather than guessed into a geography. The generated snapshot publishes both the unassigned count and mapping coverage.
 

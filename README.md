@@ -2,7 +2,7 @@
 
 [View the deployed site](https://j3ssc0des.github.io/Enviromental-Equity-In-NYC)
 
-An expanding, source-transparent atlas of New York City environmental conditions. The first module compares the 2005 and 2015 NYC Street Tree Censuses with 2020–2024 ACS five-year income context at 2010 Neighborhood Tabulation Area geography. Source years are displayed separately and the ACS release is refreshed by the build pipeline.
+An expanding, source-transparent atlas of New York City environmental conditions. The first module compares the 2005–06 and 2015–16 NYC Street Tree Censuses with 2020–2024 ACS five-year income context at 2010 Neighborhood Tabulation Area geography. Source years are displayed separately and the ACS release is refreshed by the build pipeline.
 
 ## Current module
 
