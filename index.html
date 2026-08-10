@@ -214,18 +214,18 @@
     .nta-summary {
       background: var(--surface); border: 1px solid var(--border);
       border-left: 2px solid var(--green); border-radius: 0 5px 5px 0;
-      padding: 10px 12px; font-size: 0.8rem; line-height: 1.62; color: var(--muted);
+      padding: 10px 12px; font-size: 0.84rem; line-height: 1.65; color: var(--muted);
     }
     .analysis-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
-    .analysis-title { font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--green-bright); }
+    .analysis-title { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--green-bright); }
     .analysis-mode {
-      font-family: var(--mono); font-size: 0.45rem; letter-spacing: 0.08em; text-transform: uppercase;
+      font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.08em; text-transform: uppercase;
       color: var(--muted); border: 1px solid var(--border); border-radius: 3px; padding: 2px 5px;
       white-space: nowrap;
     }
     .analysis-citation {
       display: flex; flex-wrap: wrap; gap: 3px 7px; margin-top: 6px;
-      font-family: var(--mono); font-size: 0.48rem; line-height: 1.5; color: var(--muted);
+      font-family: var(--mono); font-size: 0.58rem; line-height: 1.5; color: var(--muted);
     }
     .analysis-citation[hidden] { display: none; }
     .analysis-citation a { color: var(--green); text-decoration: none; }
@@ -411,7 +411,7 @@
       .hero { align-items: center; }
       .dashboard { flex-direction: column; height: auto; min-height: 0; margin: 0; border-left: 0; border-right: 0; border-radius: 0; box-shadow: none; }
       .map-col { flex: none; height: 52vh; border-right: none; border-bottom: 1px solid var(--border); }
-      .panel-col { flex: none; height: 420px; }
+      .panel-col { flex: none; height: 520px; }
       .footer-row { flex-direction: column; align-items: flex-start; }
     }
     @media (max-width: 600px) {
@@ -435,7 +435,7 @@
     <div class="nav-tabs" role="tablist" aria-label="Atlas views">
       <button class="nav-tab active" data-tab="geomap" role="tab" aria-selected="true">MAP</button>
       <button class="nav-tab" data-tab="borough" role="tab" aria-selected="false">BOROUGHS</button>
-      <button class="nav-tab" data-tab="screening" role="tab" aria-selected="false">SCREENING</button>
+      <button class="nav-tab" data-tab="screening" role="tab" aria-selected="false">SCOREBOARD</button>
     </div>
     <div class="nav-right">
       <span class="live-badge">AUDITED DATA</span>
@@ -446,7 +446,7 @@
   <!-- HERO ──────────────────────────────────────────────────── -->
   <section class="hero">
     <h1>NYC's neighborhood environment, <em>mapped.</em></h1>
-    <p>Explore street trees and income context, one neighborhood at a time.</p>
+    <p>Explore street trees and income context, one neighborhood at a time. Click the map or search a neighborhood to begin.</p>
   </section>
 
   <!-- ① GEO MAP TAB ────────────────────────────────────────── -->
@@ -472,7 +472,7 @@
           <div class="placeholder" id="placeholder">
             <div class="ph-marker" aria-hidden="true"></div>
             <div class="ph-title">Pick a neighborhood</div>
-            <div class="ph-hint" id="ph-count">Click the map to load a clear, sourced snapshot</div>
+            <div class="ph-hint" id="ph-count">Click the map or search above to load a clear, sourced snapshot.</div>
           </div>
 
           <!-- Loaded state: shared overview + tab detail panels -->
@@ -599,7 +599,7 @@
   </div>
 
   <!-- ③ SCREENING SCORE TAB ─────────────────────────────────────── -->
-  <div id="tab-heat" class="tab-view">
+  <div id="tab-screening" class="tab-view">
     <div class="tabview-inner">
       <div class="tv-header">
         <div class="tv-title">Tree + Income Screening Score: top 20</div>
