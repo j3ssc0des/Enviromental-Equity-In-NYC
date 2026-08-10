@@ -51,7 +51,8 @@ for forbidden in (">LIVE<", "hazardous", "safe limit", "receive less investment"
     if forbidden.lower() in html.lower(): errors.append(f"unsupported UI language remains: {forbidden}")
 for required in ("data/processed/nta_environmental_snapshot.geojson",
                  "investment_eligible === true", "NON_RESIDENTIAL_NAME",
-                 "Rankings are hidden rather than showing stale values"):
+                 "Rankings are hidden rather than showing stale values",
+                 'id="download-report"', 'Download report'):
     if required not in html: errors.append(f"required UI safeguard is missing: {required}")
 pipeline=(ROOT/"nyc_trees_analysis.py").read_text()
 for forbidden in ("Heat Risk:", "Urban Heat Vulnerability", "Underserved Index"):
