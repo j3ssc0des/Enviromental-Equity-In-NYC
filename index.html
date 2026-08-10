@@ -214,6 +214,8 @@
       font: 0.5rem var(--mono); letter-spacing: .1em; text-transform: uppercase;
     }
     .share-btn:hover,.share-btn:focus-visible { color: var(--green); border-color: var(--green); outline: none; }
+    .report-btn { color: var(--green); border-color: rgba(47,160,94,0.55); }
+    .report-btn:hover,.report-btn:focus-visible { background: rgba(47,160,94,0.12); border-color: var(--green); outline: none; }
 
 
     .panel-divider { height: 1px; background: var(--border); margin: 13px 0; }
@@ -488,6 +490,7 @@
               <span class="nta-boro" id="nta-boro"></span>
               <span class="eq-badge" id="eq-badge"></span>
               <button class="share-btn" id="share-neighborhood" type="button">Copy link</button>
+              <button class="share-btn report-btn" id="download-report" type="button">Download report</button>
             </div>
 
             <!-- One concise source-bound interpretation for the active metric -->
@@ -884,6 +887,67 @@ function setTreeWave(wave) {
     );
   }
   if (currentNeighborhood) updatePanel(currentNeighborhood);
+}
+
+function formatReportNumber(value, suffix = '') {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number.toLocaleString()}${suffix}` : 'Not available';
+}
+
+function downloadNeighborhoodReport() {
+  if (!currentNeighborhood) return;
+  const p = currentNeighborhood;
+  const refs = currentReferences();
+  const selectedWave = currentTreeWave === '2005' ? '2005–06' : '2015–16';
+  const selectedTrees = currentTreeWave === '2005' ? p.trees_2005 : p.trees_2015;
+  const selectedDensity = currentTreeWave === '2005' ? p.density_2005 : p.density_2015;
+  const score = Number(p.underserved);
+  const income = Number(p.median_income);
+  const reportLines = [
+    'NYC ENVIRONMENTAL ATLAS - NEIGHBORHOOD REPORT',
+    `Generated: ${new Date().toISOString().slice(0, 10)}`,
+    '',
+    `Neighborhood: ${p.nta_name || 'Not available'}`,
+    `Borough: ${p.boro_name || p.borough || 'Not available'}`,
+    `NTA code: ${p.nta_code || 'Not available'}`,
+    `Area context: ${p.area_context || 'Not available'}`,
+    `Investment eligible: ${isInvestmentEligible(p) ? 'Yes' : 'No - context only'}`,
+    '',
+    'STREET TREES',
+    `Selected census wave: ${selectedWave}`,
+    `Street trees (${selectedWave}): ${formatReportNumber(selectedTrees)}`,
+    `Tree density (${selectedWave}): ${formatReportNumber(selectedDensity, ' trees/km²')}`,
+    `Street trees (other wave): ${formatReportNumber(currentTreeWave === '2005' ? p.trees_2015 : p.trees_2005)}`,
+    `Change, 2005–06 to 2015–16: ${formatReportNumber(p.tree_change)} trees (${formatReportNumber(p.pct_change, '%')})`,
+    `2005 mapping coverage: ${formatReportNumber(p.tree_2005_mapping_coverage_pct, '%')}`,
+    '',
+    'INCOME CONTEXT',
+    `Median household income (ACS ${p.income_source_year || 'latest'}): ${Number.isFinite(income) ? '$' + Math.round(income).toLocaleString() : 'Not available'}`,
+    `Income coverage: ${formatReportNumber(p.income_coverage_pct, '%')}`,
+    `Income estimate: ${p.income_estimated ? 'Yes - household-weighted tract approximation' : 'No'}`,
+    '',
+    'PROJECT SCREENING',
+    `Screening label: ${p.equity_label || 'Context only'}`,
+    `Screening score: ${Number.isFinite(score) && isInvestmentEligible(p) ? score.toFixed(3) : 'Not ranked'}`,
+    'Method: 55% tree-density percentile + 45% income percentile; screening is not a funding or causal conclusion.',
+    '',
+    'INTERPRETATION',
+    buildInterpretation(p, currentMetric, refs).text,
+    '',
+    'SOURCES AND LIMITATIONS',
+    'NYC Street Tree Census 2005–06 and 2015–16; ACS 2020–2024 household income via Census Reporter.',
+    'Street-tree counts exclude park trees, private trees, forest, wetlands, and total canopy.',
+    'Use this snapshot for exploration and prioritization, then verify local conditions and community evidence.'
+  ];
+  const blob = new Blob([reportLines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${String(p.nta_code || p.nta_name || 'neighborhood').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()}-environmental-report.txt`;
+  document.body.appendChild(link);
+  link.click();
+  const objectUrl = link.href;
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
 /* ── METRIC TAB SWITCH (inside right panel) ────────────────── */
@@ -1348,6 +1412,8 @@ document.getElementById('share-neighborhood').addEventListener('click', async fu
   }
   setTimeout(() => { button.textContent = 'Copy link'; }, 1600);
 });
+
+document.getElementById('download-report').addEventListener('click', downloadNeighborhoodReport);
 
 /* ── NAV TAB SWITCHING ─────────────────────────────────────── */
 document.querySelectorAll('.nav-tab').forEach(function(btn) {
