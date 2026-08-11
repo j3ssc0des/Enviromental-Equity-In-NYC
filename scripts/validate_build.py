@@ -54,13 +54,16 @@ for required in ("data/processed/nta_environmental_snapshot.geojson",
                  "data/processed/nta2020_heat_vulnerability.geojson",
                  "Official source geographies",
                  'id="download-report"', 'Download report',
-                 'data-tab="heat"', 'NTA2020', 'Heat Vulnerability Index (2023)'):
+                 'data-tab="heat"', 'NTA2020', 'Heat Vulnerability Index (2023)',
+                 "select_at_location", "sourceGeography"):
     if required not in html: errors.append(f"required UI safeguard is missing: {required}")
 pipeline=(ROOT/"nyc_trees_analysis.py").read_text()
 for forbidden in ("Heat Risk:", "Urban Heat Vulnerability", "Underserved Index"):
     if forbidden in pipeline: errors.append(f"unsupported map language remains: {forbidden}")
 interpretation=(ROOT/"assets/interpretation.mjs").read_text()
-for required in ("buildInterpretation", "official 2023 Heat Vulnerability Index score", "citywide density across 2010 NTAs"):
+for required in ("buildInterpretation", "official 2023 Heat Vulnerability Index score",
+                 "standard neighborhood NTAs", "borough’s area-weighted density",
+                 "HVI-area median", "establish causation"):
     if required not in interpretation: errors.append(f"local interpretation safeguard is missing: {required}")
 published_text=(ROOT/"index.html").read_text()+interpretation
 for forbidden in ("OPENAI_API_KEY", "api.openai.com", "ATLAS_AI_ENDPOINT", "AI interpretation"):

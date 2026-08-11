@@ -6,6 +6,8 @@ This site is an environmental-data exploration tool. It is not a risk assessment
 
 Tree mode uses 2010 Neighborhood Tabulation Areas (NTAs), matching the codes carried by the 2005–06 and 2015–16 Street Tree Census products. Heat mode uses 2020 NTAs, matching the official 2023 HVI file. The two boundary systems are switched as separate layers and are never treated as interchangeable.
 
+When a visitor switches between tree and heat modes, the interface preserves the selected map location and opens the polygon from the other dataset that contains that point. This is a navigation aid, not a data crosswalk: the panel and report continue to identify each record by its own NTA name, code, vintage, and source year.
+
 ## Street trees
 
 Tree counts come from the NYC Parks 2005–06 and 2015–16 Street Tree Censuses. The interface lets you switch the active census wave while retaining the same NTA geography. Density is count divided by land area, not total polygon area. Street-tree counts do not represent park trees, private trees, forest, wetlands, or total canopy.
@@ -26,7 +28,7 @@ The atlas displays NYC DOHMH's official 2023 Heat Vulnerability Index directly. 
 
 Mapped associations do not prove that trees caused heat outcomes or that observed differences reflect a specific investment history.
 
-The optional neighborhood interpretation is generated locally from explicit rules in `assets/interpretation.mjs`; it does not call an AI model or remote interpretation service. It compares tree density with the exact citywide density derived from the published tree counts and official land areas, describes historical tree-count direction, and explains the official HVI scale. Automated tests run every published neighborhood through the relevant rules and reject causal or hazardous language.
+The optional neighborhood interpretation is generated locally from explicit rules in `assets/interpretation.mjs`; it does not call an AI model or remote interpretation service. Tree analysis reports a percentile among standard neighborhood NTAs, an area-weighted borough comparison, and exact recorded change. Heat analysis reports the official score distribution and compares the source file’s published temperature, green-space, and air-conditioning values with medians calculated across the same 197 HVI-covered 2020 NTAs. These comparisons are descriptive arithmetic, not new environmental measurements or causal findings. Automated tests run every published neighborhood through the relevant rules and reject causal or hazardous language.
 
 ## Planned income and screening analysis
 
