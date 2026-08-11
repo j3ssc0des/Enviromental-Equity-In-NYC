@@ -121,7 +121,7 @@ test('predictive neighborhood search replaces the current value without manual c
   const mapFrame = page.frameLocator('#map-frame');
   const selectedPath = mapFrame.locator('path.atlas-selected').first();
   await expect(selectedPath).toBeVisible();
-  await expect(mapFrame.locator('.atlas-selected-label')).toContainText('Selected');
+  await expect(mapFrame.locator('.atlas-selected-label')).toHaveCount(0);
   const selectedColors = await selectedPath.evaluate(path => {
     const style = getComputedStyle(path);
     return { stroke:style.stroke, fill:style.fill };
@@ -134,6 +134,30 @@ test('predictive neighborhood search replaces the current value without manual c
     return { zoom:map.getZoom(), lat:center.lat, lng:center.lng };
   });
   expect(viewAfterSearch).toEqual(viewBeforeSearch);
+});
+
+test('clicking empty map space clears the selected neighborhood', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.startsWith('mobile'), 'covered by desktop interaction test');
+  await waitForAtlas(page);
+  await selectTreeNeighborhood(page, 'Upper East Side-Carnegie Hill');
+  const mapFrame = page.frameLocator('#map-frame');
+  await expect(mapFrame.locator('path.atlas-selected').first()).toBeVisible();
+
+  await page.locator('#map-frame').evaluate(frame => {
+    const map = Object.values(frame.contentWindow).find(value =>
+      value && typeof value === 'object' && value.fire && value.getContainer && value.getCenter
+    );
+    map.fire('click', {
+      latlng:map.getCenter(),
+      originalEvent:{ target:map.getContainer() },
+    });
+  });
+
+  await expect(page.locator('#nta-data')).not.toHaveClass(/visible/);
+  await expect(page.locator('#placeholder')).toBeVisible();
+  await expect(page.locator('#nta-search')).toHaveValue('');
+  await expect(mapFrame.locator('path.atlas-selected')).toHaveCount(0);
+  await expect(page).not.toHaveURL(/#(?:nta|heat)=/);
 });
 
 test('combined report contains separate tree and heat records', async ({ page }, testInfo) => {
