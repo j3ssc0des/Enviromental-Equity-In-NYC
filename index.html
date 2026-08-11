@@ -860,7 +860,7 @@ function updateHeatPanel(p) {
 function openNeighborhood(p, shouldZoom) {
   if (!p) return;
   resetHighlights();
-  highlightNTA(p.nta_name, '#2fa05e');
+  highlightNTA(p.nta_name);
   updatePanel(p);
   document.getElementById('nta-search').value = p.nta_name || '';
   if (shouldZoom) zoomToNTA(p.nta_name);
@@ -873,7 +873,7 @@ function openNeighborhood(p, shouldZoom) {
 function openHeatNeighborhood(p, shouldZoom) {
   if (!p) return;
   resetHighlights();
-  highlightNTA(p.nta_name, '#e34a33');
+  highlightNTA(p.nta_name);
   updateHeatPanel(p);
   document.getElementById('nta-search').value = p.nta_name || '';
   if (shouldZoom) zoomToNTA(p.nta_name);
@@ -1114,10 +1114,10 @@ window.addEventListener('message', function(e) {
 });
 
 /* ── MAP HELPERS ───────────────────────────────────────────── */
-function highlightNTA(ntaName, color) {
+function highlightNTA(ntaName) {
   const frame = document.getElementById('map-frame');
   if (frame && frame.contentWindow)
-    frame.contentWindow.postMessage({type:'highlight_nta', nta_name:ntaName, color:color, weight:2.5}, '*');
+    frame.contentWindow.postMessage({type:'highlight_nta', nta_name:ntaName, color:'#4DD8FF', weight:4}, '*');
 }
 function resetHighlights() {
   const frame = document.getElementById('map-frame');
@@ -1209,6 +1209,28 @@ function injectIntoIframe() {
     if (iWin.__dbInjected) return;
     iWin.__dbInjected = true;
 
+    const selectionStyle = iDoc.createElement('style');
+    selectionStyle.textContent = `
+      @keyframes atlasSelectionPulse {
+        0% { stroke-width: 8px; stroke-opacity: .35; }
+        100% { stroke-width: 4px; stroke-opacity: 1; }
+      }
+      path.atlas-selected {
+        filter: drop-shadow(0 0 2px #071018) drop-shadow(0 0 5px #4DD8FF);
+        animation: atlasSelectionPulse .8s ease-out 1;
+        stroke-linejoin: round;
+      }
+      .atlas-selected-label {
+        display:flex;align-items:center;gap:5px;transform:translate(-50%,-100%);
+        width:max-content;padding:4px 7px;border-radius:4px;
+        background:rgba(7,16,24,.94);border:1px solid #4DD8FF;color:#e9fbff;
+        box-shadow:0 2px 10px rgba(0,0,0,.55);font:600 10px/1 'DM Sans',sans-serif;
+        letter-spacing:.06em;text-transform:uppercase;pointer-events:none;
+      }
+      .atlas-selected-label span { width:6px;height:6px;border-radius:50%;background:#4DD8FF; }
+    `;
+    iDoc.head.appendChild(selectionStyle);
+
     const s = iDoc.createElement('script');
     s.textContent = `(function(){
       var map=null;
@@ -1293,14 +1315,28 @@ function injectIntoIframe() {
       window.addEventListener('message',function(msg){
         if(!msg.data) return;
         if(msg.data.type==='highlight_nta'){
-          var nta=msg.data.nta_name,color=msg.data.color||'#fff',weight=msg.data.weight||2.5;
+          var nta=msg.data.nta_name,color=msg.data.color||'#4DD8FF',weight=msg.data.weight||4;
+          var markerPlaced=false;
           Object.values(window.__layerMap||{}).forEach(function(layer){
+            if(!map.hasLayer(layer)) return;
             walkFeatures(layer,function(sub){
               if(sub.feature.properties.nta_name===nta){
                 if(!sub.__atlasBaseStyle) sub.__atlasBaseStyle={
-                  color:sub.options.color,weight:sub.options.weight,fillOpacity:sub.options.fillOpacity
+                  color:sub.options.color,weight:sub.options.weight,opacity:sub.options.opacity,
+                  fillOpacity:sub.options.fillOpacity
                 };
-                sub.setStyle({color:color,weight:weight,fillOpacity:0.9});
+                sub.setStyle({color:color,weight:weight,opacity:1});
+                if(sub.bringToFront) sub.bringToFront();
+                if(sub._path) sub._path.classList.add('atlas-selected');
+                if(!markerPlaced&&sub.getBounds){
+                  markerPlaced=true;
+                  if(window.__atlasSelectionMarker) map.removeLayer(window.__atlasSelectionMarker);
+                  var center=typeof sub.getCenter==='function'?sub.getCenter():sub.getBounds().getCenter();
+                  window.__atlasSelectionMarker=L.marker(center,{
+                    interactive:false,keyboard:false,pane:'tooltipPane',
+                    icon:L.divIcon({className:'',html:'<div class="atlas-selected-label"><span></span>Selected</div>',iconSize:null})
+                  }).addTo(map);
+                }
               }
             });
           });
@@ -1310,10 +1346,15 @@ function injectIntoIframe() {
             walkFeatures(layer,function(sub){
               if(sub.__atlasBaseStyle){
                 sub.setStyle(sub.__atlasBaseStyle);
+                if(sub._path) sub._path.classList.remove('atlas-selected');
                 delete sub.__atlasBaseStyle;
               }
             });
           });
+          if(window.__atlasSelectionMarker){
+            map.removeLayer(window.__atlasSelectionMarker);
+            window.__atlasSelectionMarker=null;
+          }
         }
         if(msg.data.type==='zoom_to_nta'){
           var znta=msg.data.nta_name,zfound=false;
