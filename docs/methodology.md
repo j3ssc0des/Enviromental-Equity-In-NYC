@@ -32,6 +32,12 @@ Mapped associations do not prove that trees caused heat outcomes or that observe
 
 The optional neighborhood interpretation is generated locally from explicit rules in `assets/interpretation.mjs`; it does not call an AI model or remote interpretation service. Tree analysis reports a percentile among standard neighborhood NTAs, an area-weighted borough comparison, and exact recorded change. Heat analysis reports the official score distribution and compares the source file’s published temperature, green-space, and air-conditioning values with medians calculated across the same 197 HVI-covered 2020 NTAs. These comparisons are descriptive arithmetic, not new environmental measurements or causal findings. Automated tests run every published neighborhood through the relevant rules and reject causal or hazardous language.
 
+## Flood vulnerability
+
+Flood mode uses New York City's official Flood Vulnerability Index (`mrjc-v9pm`) directly on the dataset's census-tract polygons. The default flood layer is the published present storm-surge FVI (`ss_cur`), scored from 1 to 5. The inspector also reports the Flood Susceptibility to Harm and Recovery Index and the published 2050s and 2080s storm-surge scenarios. No tract-to-NTA conversion is performed.
+
+Most tracts do not have a score for every hazard scenario. Missing means that the official dataset does not publish a score for that tract and scenario; it is not converted to zero, “low risk,” or “safe.” The FVI is an area-level relative index, not a parcel flood map, insurance determination, or prediction of a specific event.
+
 ## Planned income and screening analysis
 
 Income context and multi-factor screening are planned, but are not part of the current published metrics. Income will retain its official source geography and reference period unless a documented, tested conversion is necessary; a converted value will be clearly identified as an estimate rather than an official neighborhood statistic.

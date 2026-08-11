@@ -21,7 +21,7 @@ Street trees are not total canopy, and an HVI score of 1 does not mean no heat r
 
 ## Roadmap
 
-The [data catalog](docs/data-catalog.md) tracks official heat, flooding, canopy, air, pollution, water, health, and community-vulnerability sources. A dataset is promoted only after its native geography, uncertainty, transformation, missingness behavior, and update cadence are documented and tested.
+The [data catalog](docs/data-catalog.md) tracks official heat, flooding, canopy, air, pollution, water, health, and community-vulnerability sources. Trees, heat, and NYC's Flood Vulnerability Index are now published on their native official geographies. A dataset is promoted only after its geography, uncertainty, transformation, missingness behavior, and update cadence are documented and tested.
 
 The optional interpretation disclosure uses transparent rules, links directly to public sources, and states each metric's limitations. It runs locally in the visitor's browser, so the deployed site needs no API key, serverless function, paid AI service, or credit card.
 

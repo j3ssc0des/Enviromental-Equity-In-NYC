@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 DATA=ROOT/"data/processed/nta_environmental_snapshot.geojson"
 HEAT_DATA=ROOT/"data/processed/nta2020_heat_vulnerability.geojson"
+FLOOD_DATA=ROOT/"data/processed/census_tract_flood_vulnerability.geojson"
 errors=[]
 if not DATA.exists(): errors.append("processed GeoJSON is missing")
 else:
@@ -46,15 +47,28 @@ else:
         errors.append("HVI score is outside the official 1-5 range")
     if any("estimated" in key.lower() for p in heat_props for key in p):
         errors.append("estimated field appears in native HVI product")
+if not FLOOD_DATA.exists(): errors.append("official FVI GeoJSON is missing")
+else:
+    flood_features=json.loads(FLOOD_DATA.read_text()).get("features",[])
+    flood_props=[f.get("properties",{}) for f in flood_features]
+    if len(flood_features)!=2209: errors.append(f"expected 2209 official FVI tracts; found {len(flood_features)}")
+    if len({p.get("geoid") for p in flood_props})!=len(flood_features): errors.append("duplicate FVI tract GEOIDs detected")
+    if any(p.get("data_mode")!="official" or p.get("dataset_geography")!="CensusTract" for p in flood_props):
+        errors.append("non-official or transformed FVI geography detected")
+    for field in ("fshri","ss_cur","ss_50s","ss_80s","tid_20s","tid_50s","tid_80s"):
+        if any(p.get(field) is not None and (not isinstance(p[field],int) or not 1<=p[field]<=5) for p in flood_props):
+            errors.append(f"FVI field {field} is outside the official 1-5 range")
 html=(ROOT/"index.html").read_text()
 for forbidden in (">LIVE<", "hazardous", "safe limit", "receive less investment",
                   "LOWER RISK", "NYC Healthy Benchmark", "investment_eligible !== false", "\u2014"):
     if forbidden.lower() in html.lower(): errors.append(f"unsupported UI language remains: {forbidden}")
 for required in ("data/processed/nta_environmental_snapshot.geojson",
                  "data/processed/nta2020_heat_vulnerability.geojson",
+                 "data/processed/census_tract_flood_vulnerability.geojson",
                  "Official source geographies",
                  'id="download-report"', 'Download report',
                  'data-tab="heat"', 'NTA2020', 'Heat Vulnerability Index (2023)',
+                 'data-tab="flood"', 'CensusTract', 'Flood Vulnerability',
                  "select_at_location", "sourceGeography", "resolveReportRecord",
                  "COMBINED LOCATION REPORT", 'role="combobox"', "renderSearchSuggestions"):
     if required not in html: errors.append(f"required UI safeguard is missing: {required}")
