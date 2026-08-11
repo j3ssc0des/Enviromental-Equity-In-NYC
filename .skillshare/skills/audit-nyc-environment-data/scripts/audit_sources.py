@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Audit declared public data sources and write a machine-readable report."""
-import json, subprocess, sys
+import csv, io, json, subprocess, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -14,19 +14,28 @@ def get_json(url):
                           check=True,capture_output=True,text=True)
     return json.loads(result.stdout)
 
+def get_text(url):
+    result=subprocess.run(["curl","-fsSL","--max-time","45","-A","nyc-environmental-atlas-audit/1.0",url],
+                          check=True,capture_output=True,text=True)
+    return result.stdout
+
 def audit(source):
     observed_reference_year=None
     reference_period=None
     if source["kind"] == "socrata":
         url = f"https://data.cityofnewyork.us/resource/{source['id']}.json?$limit=1"
         payload=get_json(url)
+    elif source["kind"] == "static_csv":
+        url=source["url"]
+        payload=list(csv.DictReader(io.StringIO(get_text(url))))
     else:
         url=("https://api.censusreporter.org/1.0/data/show/latest?"
              "table_ids=B19013%2CB11001&geo_ids=140%7C04000US36")
         payload=get_json(url)
     if source["kind"]=="census_reporter":
-        ACS_CACHE.parent.mkdir(parents=True, exist_ok=True)
-        ACS_CACHE.write_text(json.dumps(payload)+"\n")
+        if source["status"]=="active":
+            ACS_CACHE.parent.mkdir(parents=True, exist_ok=True)
+            ACS_CACHE.write_text(json.dumps(payload)+"\n")
         reference_period=str(payload["release"]["years"])
         observed_reference_year=int(reference_period.split("-")[-1])
         sample=next(iter(payload["data"].values()))

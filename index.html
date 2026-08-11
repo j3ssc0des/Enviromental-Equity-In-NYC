@@ -239,6 +239,13 @@
     .analysis-citation a { color: var(--green); text-decoration: none; }
     .analysis-citation a:not(:last-child)::after { content: ' ·'; color: var(--muted); }
     .analysis-citation a:hover,.analysis-citation a:focus-visible { text-decoration: underline; outline: none; }
+    .analysis-details { border-top: 1px solid var(--border); padding-top: 11px; }
+    .analysis-details summary {
+      cursor: pointer; color: var(--green-bright); font-family: var(--mono);
+      font-size: 0.62rem; letter-spacing: 0.13em; text-transform: uppercase;
+    }
+    .analysis-details summary:hover,.analysis-details summary:focus-visible { color: #fff; outline: none; }
+    .analysis-details[open] summary { margin-bottom: 9px; }
 
     /* ── PER-TAB PANEL SECTIONS ──────────────────────────── */
     .tab-panel { display: none; }
@@ -285,7 +292,7 @@
     }
     .cmp-ends { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.5rem; color: var(--muted); }
 
-    /* Income compare badge */
+    /* Metric comparison badge */
     .avg-compare {
       display: inline-flex; align-items: center; gap: 5px;
       border-radius: 4px; padding: 4px 10px; margin-bottom: 12px;
@@ -293,7 +300,6 @@
     }
 
     /* Heat panel */
-    .screening-hero-num { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--orange); line-height: 1; margin-bottom: 3px; }
     .air-source { font-family: var(--mono); font-size: 0.48rem; letter-spacing: 0.04em; color: var(--muted); margin-top: 12px; line-height: 1.6; }
     .boro-compare { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 9px 11px; }
     .boro-compare-label { font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
@@ -353,30 +359,6 @@
     .borough-table tr:last-child td { border-bottom: none; }
     .borough-table tr:hover td { background: rgba(47,160,94,0.04); }
     .borough-table .mono-val { font-family: var(--mono); color: var(--green); }
-
-    /* ── SCREENING SCORE VIEW ───────────────────────────────────── */
-    .screening-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 0.75rem; }
-    .screening-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-      padding: 1rem 1.1rem;
-    }
-    .screening-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
-    .screening-nta { font-size: 0.88rem; font-weight: 600; color: #fff; line-height: 1.25; }
-    .screening-boro { font-family: var(--mono); font-size: 0.58rem; color: var(--muted); margin-top: 2px; letter-spacing: 0.06em; }
-    .screening-label-badge {
-      font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.1em;
-      padding: 3px 7px; border-radius: 3px; flex-shrink: 0; text-transform: uppercase;
-    }
-    .screening-bar-wrap { margin-bottom: 8px; }
-    .screening-bar-track { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin-bottom: 3px; }
-    .screening-bar-fill { height: 100%; border-radius: 3px; transition: width 0.7s ease; }
-    .screening-bar-ends { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.5rem; color: var(--muted); }
-    .screening-stats { display: flex; gap: 12px; }
-    .screening-stat { font-family: var(--mono); font-size: 0.6rem; color: var(--muted); }
-    .screening-stat span { color: var(--text); }
-
-    /* Rank number */
-    .screening-rank { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); flex-shrink: 0; width: 20px; text-align: right; }
 
     /* ── KEY FINDINGS ──────────────────────────────────────── */
     .findings { max-width: 900px; margin: 0 auto 3rem; padding: 0 1.5rem; }
@@ -443,7 +425,6 @@
     <div class="nav-tabs" role="tablist" aria-label="Atlas views">
       <button class="nav-tab active" data-tab="geomap" role="tab" aria-selected="true">MAP</button>
       <button class="nav-tab" data-tab="borough" role="tab" aria-selected="false">BOROUGHS</button>
-      <button class="nav-tab" data-tab="screening" role="tab" aria-selected="false">SCOREBOARD</button>
     </div>
     <div class="nav-right">
       <span class="live-badge">AUDITED DATA</span>
@@ -454,7 +435,7 @@
   <!-- HERO ──────────────────────────────────────────────────── -->
   <section class="hero">
     <h1>NYC's neighborhood environment, <em>mapped.</em></h1>
-    <p><span class="hero-line">Explore street trees and income context, one neighborhood at a time.</span><span class="hero-line">Click the map or search a neighborhood to begin.</span></p>
+    <p><span class="hero-line">Explore official street-tree census and heat-vulnerability data.</span><span class="hero-line">Switch metrics, then click the map or search a neighborhood.</span></p>
   </section>
 
   <!-- ① GEO MAP TAB ────────────────────────────────────────── -->
@@ -471,8 +452,7 @@
           <datalist id="nta-options"></datalist>
           <div class="metric-tabs" role="tablist" aria-label="Neighborhood metrics">
             <button class="mtab active" data-tab="trees" role="tab" aria-selected="true">TREES</button>
-            <button class="mtab" data-tab="income" role="tab" aria-selected="false">INCOME</button>
-            <button class="mtab" data-tab="equity" role="tab" aria-selected="false">SCORE</button>
+            <button class="mtab" data-tab="heat" role="tab" aria-selected="false">HEAT</button>
           </div>
         </div>
         <div class="panel-body" id="panel-body">
@@ -492,15 +472,6 @@
               <button class="share-btn" id="share-neighborhood" type="button">Copy link</button>
               <button class="share-btn report-btn" id="download-report" type="button">Download report</button>
             </div>
-
-            <!-- One concise source-bound interpretation for the active metric -->
-            <div class="analysis-heading">
-              <span class="analysis-title" id="analysis-title">Atlas analysis</span>
-              <span class="analysis-mode" id="analysis-mode">Rules + public data</span>
-            </div>
-            <div class="nta-summary" id="tp-equity-summary" aria-live="polite"></div>
-            <div class="analysis-citation" id="analysis-citation" hidden></div>
-            <div class="panel-divider"></div>
 
             <!-- TREES TAB PANEL -->
             <div class="tab-panel active" id="tp-trees">
@@ -529,7 +500,7 @@
               </div>
               <div class="cmp-section">
                 <div class="cmp-label-row">
-                  <span class="cmp-label">Density vs ranked-area average (<span id="tp-density-reference">loading</span>)</span>
+                  <span class="cmp-label">Density vs all 2010 NTAs (<span id="tp-density-reference">loading</span>)</span>
                 </div>
                 <div class="cmp-track">
                   <div class="cmp-fill" id="tp-dens-fill"></div>
@@ -542,33 +513,38 @@
               </div>
             </div>
 
-            <!-- INCOME TAB PANEL -->
-            <div class="tab-panel" id="tp-income">
+            <!-- HEAT TAB PANEL: official values on their native 2020 NTA geography -->
+            <div class="tab-panel" id="tp-heat">
               <div class="hero-stat">
-                <div class="hero-num" id="tp-income-val"></div>
-                <div class="hero-label" id="tp-income-source-label">Median household income estimate</div>
+                <div class="hero-num" id="tp-heat-score"></div>
+                <div class="hero-label">Official 2023 Heat Vulnerability Index score, out of 5</div>
               </div>
-              <div id="tp-income-badge" class="avg-compare"></div>
-              <div class="cmp-section">
-                <div class="cmp-label-row">
-                  <span class="cmp-label">Income rank among eligible areas</span>
-                  <span class="cmp-note" id="tp-rank-note"></span>
+              <div class="sec-stats">
+                <div class="sec-box">
+                  <div class="sec-label">Surface temperature</div>
+                  <div class="sec-val neutral" id="tp-heat-temp"></div>
                 </div>
-                <div class="cmp-track">
-                  <div class="cmp-fill" id="tp-income-fill" style="background:var(--purple)"></div>
+                <div class="sec-box">
+                  <div class="sec-label">Green space</div>
+                  <div class="sec-val neutral" id="tp-heat-green"></div>
                 </div>
-                <div class="cmp-ends"><span>Lowest</span><span>Highest</span></div>
+                <div class="sec-box">
+                  <div class="sec-label">Households with AC</div>
+                  <div class="sec-val neutral" id="tp-heat-ac"></div>
+                </div>
               </div>
+              <div class="score-note">Published directly by NYC DOHMH on 2020 NTA boundaries. No project crosswalk or estimated neighborhood score is used.</div>
             </div>
 
-            <!-- EQUITY TAB PANEL -->
-            <div class="tab-panel" id="tp-equity">
-              <div class="hero-stat">
-                <div class="hero-num" id="tp-score-big"></div>
-                <div class="hero-label">Project screening score: lower tree density 55% + lower income 45%</div>
+            <details class="analysis-details" id="analysis-details">
+              <summary>What this means</summary>
+              <div class="analysis-heading">
+                <span class="analysis-title" id="analysis-title">Atlas analysis</span>
+                <span class="analysis-mode" id="analysis-mode">Rules + public data</span>
               </div>
-              <div id="tp-score-details"></div>
-            </div>
+              <div class="nta-summary" id="tp-equity-summary" aria-live="polite"></div>
+              <div class="analysis-citation" id="analysis-citation" hidden></div>
+            </details>
 
           </div><!-- /.nta-data -->
 
@@ -579,7 +555,7 @@
 
     <div class="data-status" id="data-status" role="status" aria-live="polite">
       <span><strong>LOADING</strong> validated neighborhood snapshot</span>
-      <span>Residential rankings only</span>
+      <span>Official source geographies only</span>
       <a href="docs/methodology.md">How this works</a>
     </div>
   </div><!-- /#tab-geomap -->
@@ -589,7 +565,7 @@
     <div class="tabview-inner">
       <div class="tv-header">
         <div class="tv-title">Borough comparison</div>
-        <div class="tv-sub">Residential/community areas only. Values are descriptive project comparisons, not funding decisions.</div>
+        <div class="tv-sub">Official street-tree counts summarized from the 2015–16 census on 2010 NTA geography.</div>
       </div>
       <div id="borough-loading" class="loading-msg">Loading data from map...</div>
       <div id="borough-content" style="display:none">
@@ -601,27 +577,11 @@
                 <th>Borough</th>
                 <th>Total Trees</th>
                 <th>Avg Density (trees/km²)</th>
-                <th>Avg Median Income</th>
-                <th>Higher-score areas</th>
               </tr>
             </thead>
             <tbody id="borough-tbody"></tbody>
           </table>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ③ SCREENING SCORE TAB ─────────────────────────────────────── -->
-  <div id="tab-screening" class="tab-view">
-    <div class="tabview-inner">
-      <div class="tv-header">
-        <div class="tv-title">Tree + Income Screening Score: top 20</div>
-        <div class="tv-sub">Higher scores mean lower street-tree density (55%) and lower estimated income (45%) overlap more strongly. This project comparison is not measured risk or a funding decision.</div>
-      </div>
-      <div id="screening-loading" class="loading-msg">Loading data from map...</div>
-      <div id="screening-content" style="display:none">
-        <div class="screening-grid" id="screening-grid"></div>
       </div>
     </div>
   </div>
@@ -635,16 +595,12 @@
         <p id="finding-spread">NYC has one skyline, but its sidewalk shade changes dramatically from neighborhood to neighborhood.</p>
       </div>
       <div class="finding">
-        <div class="finding-tag">Priority signal</div>
-        <p id="finding-priority">The screening score helps spot where lower tree density and lower income overlap.</p>
+        <div class="finding-tag">Official heat context</div>
+        <p>Heat mode uses NYC DOHMH's published 2023 HVI scores directly on 2020 NTA boundaries.</p>
       </div>
       <div class="finding">
         <div class="finding-tag">Tree comeback</div>
         <p id="finding-change">Some neighborhoods added a surprising number of street trees between the two censuses.</p>
-      </div>
-      <div class="finding">
-        <div class="finding-tag">Reality check</div>
-        <p id="finding-guardrail">Airports, parks, and cemeteries can stay on the map, but they sit out community rankings. Fair is fair.</p>
       </div>
     </div>
   </div>
@@ -661,7 +617,9 @@
           <span>·</span>
           <a href="https://data.cityofnewyork.us/City-Government/2010-Census-Tract-to-Neighborhood-Tabulation-Area-/8ius-dhrr" target="_blank" rel="noopener">NYC Neighborhood Tabulation Areas</a>
           <span>·</span>
-          <a href="https://api.census.gov/data/2024/acs/acs5.html" target="_blank" rel="noopener">ACS 2020–2024</a>
+          <a href="https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/hvi/" target="_blank" rel="noopener">NYC DOHMH HVI 2023</a>
+          <span>·</span>
+          <a href="https://data.cityofnewyork.us/d/9nt8-h7nd" target="_blank" rel="noopener">NYC 2020 NTAs</a>
         </div>
         <a class="footer-credit" href="https://github.com/j3ssc0des/Enviromental-Equity-In-NYC" target="_blank" rel="noopener" style="color:var(--green);text-decoration:none;">View on GitHub</a>
       </div>
@@ -679,31 +637,16 @@ import { buildInterpretation } from './assets/interpretation.mjs';
 
 /* ── SHARED STATE ──────────────────────────────────────────── */
 let ntaData      = [];
+let heatData     = [];
 let boroughBuilt = false;
-let screeningBuilt = false;
 let currentNeighborhood = null;
+let currentTreeNeighborhood = null;
+let currentHeatNeighborhood = null;
 let currentMetric = 'trees';
 let currentTreeWave = '2015';
-const NON_RESIDENTIAL_NAME = /airport|park-cemetery|cemetery|park$|riker|fort totten|governors island|ellis island|liberty island/i;
-
-function isInvestmentEligible(d) {
-  const name = String((d && d.nta_name) || '');
-  return !!d && d.investment_eligible === true && !NON_RESIDENTIAL_NAME.test(name);
-}
-
-function eligibleNeighborhoods() {
-  return ntaData.filter(isInvestmentEligible);
-}
-
-function median(values) {
-  const sorted = values.filter(Number.isFinite).sort((a,b) => a-b);
-  if (!sorted.length) return 0;
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
 
 function currentReferences(treeWave = currentTreeWave) {
-  const rows = eligibleNeighborhoods();
+  const rows = ntaData;
   const treeField = treeWave === '2005' ? 'trees_2005' : 'trees_2015';
   const totalTrees = rows.reduce((sum,d) => sum + (Number(d[treeField]) || 0), 0);
   const totalArea = rows.reduce((sum,d) => sum + (Number(d.area_km2) || 0), 0);
@@ -711,27 +654,7 @@ function currentReferences(treeWave = currentTreeWave) {
     rows,
     treeWave,
     density: totalArea > 0 ? totalTrees / totalArea : 0,
-    income: median(rows.map(d => Number(d.median_income))),
   };
-}
-
-/* ── EQUITY CONFIG ─────────────────────────────────────────── */
-const EQ = {
-  'Lower Priority':  { bg:'rgba(47,160,94,0.12)',  border:'#2fa05e', text:'#2fa05e' },
-  'Below Average':   { bg:'rgba(168,230,191,0.12)',border:'#a8e6bf', text:'#a8e6bf' },
-  'Middle':          { bg:'rgba(245,184,0,0.12)',  border:'#f5b800', text:'#f5b800' },
-  'Above Average':   { bg:'rgba(217,79,0,0.12)',   border:'#d94f00', text:'#d94f00' },
-  'Higher Priority': { bg:'rgba(109,0,0,0.15)',    border:'#c0392b', text:'#c0392b' },
-  'Insufficient Data':{bg:'rgba(255,255,255,0.08)',border:'#64706a', text:'#9aa59f' },
-};
-
-function scoreToColor(v) {
-  if (v <= 0.5) {
-    const t = v / 0.5;
-    return `rgb(${Math.round(47+t*198)},${Math.round(160+t*24)},${Math.round(94-t*94)})`;
-  }
-  const t = (v-0.5)/0.5;
-  return `rgb(${Math.round(245+t*(109-245))},${Math.round(184-t*184)},0)`;
 }
 
 function renderInterpretation(p, metric) {
@@ -764,21 +687,14 @@ function refreshInterpretation(p, metric) {
 /* ── GEO MAP PANEL UPDATE ──────────────────────────────────── */
 function updatePanel(p) {
   currentNeighborhood = p;
-  const eligible = isInvestmentEligible(p);
-  const label  = eligible ? (p.equity_label || 'Middle') : 'Insufficient Data';
-  const colors = EQ[label] || EQ['Middle'];
+  currentTreeNeighborhood = p;
   const waveField = currentTreeWave === '2005' ? 'trees_2005' : 'trees_2015';
   const waveDensityField = currentTreeWave === '2005' ? 'density_2005' : 'density_2015';
   const otherWaveField = currentTreeWave === '2005' ? 'trees_2015' : 'trees_2005';
   const trees  = parseInt(p[waveField]) || 0;
   const otherTrees = parseInt(p[otherWaveField]) || 0;
   const dens   = parseFloat(p[waveDensityField]) || 0;
-  const incomeValue = p.median_income == null ? NaN : Number(p.median_income);
-  const income = Number.isFinite(incomeValue) ? Math.round(incomeValue) : null;
   const change = parseInt(p.tree_change)    || 0;
-  const scoreValue = p.underserved == null ? NaN : Number(p.underserved);
-  const hasScore = eligible && Number.isFinite(scoreValue);
-  const score = hasScore ? scoreValue : 0;
   const boro   = p.boro_name || p.borough || '';
   const refs = currentReferences();
 
@@ -786,8 +702,8 @@ function updatePanel(p) {
   document.getElementById('nta-name').textContent = p.nta_name || 'Not available';
   document.getElementById('nta-boro').textContent = boro.toUpperCase();
   const badge = document.getElementById('eq-badge');
-  badge.textContent = eligible ? label.toUpperCase() : 'CONTEXT ONLY';
-  badge.style.cssText = `background:${colors.bg};border:1px solid ${colors.border};color:${colors.text}`;
+  badge.textContent = 'OFFICIAL CENSUS';
+  badge.style.cssText = 'background:rgba(47,160,94,.12);border:1px solid #2fa05e;color:#2fa05e';
 
   // ── TREES PANEL ───────────────────────────────────────────
   document.getElementById('tp-trees-count').textContent = trees.toLocaleString();
@@ -805,7 +721,7 @@ function updatePanel(p) {
   chEl.className = 'sec-val ' + (change >= 0 ? 'pos' : 'neg');
   document.getElementById('tp-density').textContent = dens.toFixed(0);
 
-  // Compare with the weighted density of eligible residential/community areas.
+  // Compare with the exact citywide density from published counts and land area.
   const densityReference = refs.density || dens;
   document.getElementById('tp-density-reference').textContent = `${Math.round(densityReference).toLocaleString()}/km²`;
   const densMax = Math.max(dens * 1.5, densityReference * 2, 1);
@@ -817,42 +733,10 @@ function updatePanel(p) {
   document.getElementById('tp-dens-max').textContent = Math.round(densMax).toLocaleString();
   const densNote = document.getElementById('tp-dens-note');
   densNote.textContent = dens >= densityReference
-    ? `+${Math.round(dens - densityReference).toLocaleString()} above ranked-area average`
-    : `${Math.round(densityReference - dens).toLocaleString()} below ranked-area average`;
+    ? `+${Math.round(dens - densityReference).toLocaleString()} above citywide NTA density`
+    : `${Math.round(densityReference - dens).toLocaleString()} below citywide NTA density`;
   densNote.className = 'cmp-note ' + (dens >= densityReference ? 'pos' : 'neg');
 
-  // ── INCOME PANEL ──────────────────────────────────────────
-  const incomeReference = refs.income;
-  const incomeYear = Number(p.income_source_year);
-  document.getElementById('tp-income-val').textContent = income == null ? 'Not available' : '$' + income.toLocaleString();
-  document.getElementById('tp-income-source-label').textContent = incomeYear
-    ? `ACS ${incomeYear - 4}–${incomeYear} household income estimate`
-    : 'Median household income estimate';
-  const aboveAvg = income != null && income >= incomeReference;
-  const incBadge = document.getElementById('tp-income-badge');
-  const diff = income == null ? 0 : Math.abs(income - incomeReference);
-  incBadge.textContent = income == null
-    ? 'Income estimate unavailable'
-    : `${aboveAvg ? '↑' : '↓'} $${Math.round(diff).toLocaleString()} ${aboveAvg ? 'above' : 'below'} eligible-area median ($${Math.round(incomeReference).toLocaleString()})`;
-  incBadge.style.cssText = aboveAvg
-    ? 'background:rgba(47,160,94,0.12);border:1px solid rgba(47,160,94,0.3);color:#2fa05e'
-    : 'background:rgba(217,79,0,0.12);border:1px solid rgba(217,79,0,0.3);color:#d94f00';
-
-  // Income rank: use sorted ntaData if available, else estimate
-  let rankPct = 0;
-  if (income != null && refs.rows.length > 1) {
-    const sorted = refs.rows.map(d => Number(d.median_income)).filter(Number.isFinite).sort((a,b)=>a-b);
-    const rank = sorted.findIndex(v => v >= income);
-    rankPct = rank < 0 ? 1 : rank / Math.max(sorted.length - 1, 1);
-    const rankNum = sorted.length - (rank < 0 ? sorted.length - 1 : rank);
-    document.getElementById('tp-rank-note').textContent = `#${rankNum} of ${sorted.length}, high to low`;
-  } else {
-    document.getElementById('tp-rank-note').textContent = '';
-  }
-  document.getElementById('tp-income-fill').style.width = (Math.min(rankPct, 1) * 100) + '%';
-
-  // ── EQUITY PANEL ──────────────────────────────────────────
-  document.getElementById('tp-score-big').textContent = hasScore ? score.toFixed(3) : 'Not ranked';
   // Show the loaded state
   document.getElementById('placeholder').style.display = 'none';
   const dataEl = document.getElementById('nta-data');
@@ -860,8 +744,25 @@ function updatePanel(p) {
   void dataEl.offsetWidth;
   dataEl.classList.add('visible');
 
-  buildScoreDetails(p);
   refreshInterpretation(p, currentMetric);
+}
+
+function updateHeatPanel(p) {
+  currentNeighborhood = p;
+  currentHeatNeighborhood = p;
+  document.getElementById('nta-name').textContent = p.nta_name || 'Not available';
+  document.getElementById('nta-boro').textContent = `${String(p.boro_name || '').toUpperCase()} · 2020 NTA`;
+  const badge = document.getElementById('eq-badge');
+  badge.textContent = 'OFFICIAL HVI';
+  badge.style.cssText = 'background:rgba(227,74,51,.12);border:1px solid #e34a33;color:#fdbb84';
+  document.getElementById('tp-heat-score').textContent = `${Number(p.hvi_score).toFixed(0)} / 5`;
+  document.getElementById('tp-heat-temp').textContent = `${Number(p.surface_temp_f).toFixed(1)}°F`;
+  document.getElementById('tp-heat-green').textContent = `${Number(p.greenspace_pct).toFixed(1)}%`;
+  document.getElementById('tp-heat-ac').textContent = `${Number(p.households_ac_pct).toFixed(1)}%`;
+  document.getElementById('placeholder').style.display = 'none';
+  const dataEl = document.getElementById('nta-data');
+  dataEl.classList.add('visible');
+  refreshInterpretation(p, 'heat');
 }
 
 function openNeighborhood(p, shouldZoom) {
@@ -877,16 +778,29 @@ function openNeighborhood(p, shouldZoom) {
   }
 }
 
+function openHeatNeighborhood(p, shouldZoom) {
+  if (!p) return;
+  resetHighlights();
+  highlightNTA(p.nta_name, '#e34a33');
+  updateHeatPanel(p);
+  document.getElementById('nta-search').value = p.nta_name || '';
+  if (shouldZoom) zoomToNTA(p.nta_name);
+  const key = p.nta_code || p.nta_name;
+  if (key && window.history && window.history.replaceState) {
+    window.history.replaceState(null, '', '#heat=' + encodeURIComponent(key));
+  }
+}
+
 function setTreeWave(wave) {
   if (wave !== '2005' && wave !== '2015') return;
   currentTreeWave = wave;
   const frame = document.getElementById('map-frame');
   if (frame && frame.contentWindow && currentMetric === 'trees') {
-    ['Tree Density (2015)', 'Tree Density (2005)', 'Median Household Income', 'Project Screening Score'].forEach(name =>
+    ['Tree Density (2015)', 'Tree Density (2005)', 'Heat Vulnerability Index (2023)'].forEach(name =>
       frame.contentWindow.postMessage({type:'toggle_layer', name, show:name === `Tree Density (${wave})`}, '*')
     );
   }
-  if (currentNeighborhood) updatePanel(currentNeighborhood);
+  if (currentTreeNeighborhood) updatePanel(currentTreeNeighborhood);
 }
 
 function formatReportNumber(value, suffix = '') {
@@ -897,12 +811,41 @@ function formatReportNumber(value, suffix = '') {
 function downloadNeighborhoodReport() {
   if (!currentNeighborhood) return;
   const p = currentNeighborhood;
+  if (p.dataset_geography === 'NTA2020') {
+    const heatLines = [
+      'NYC ENVIRONMENTAL ATLAS - OFFICIAL HEAT VULNERABILITY RECORD',
+      `Generated: ${new Date().toISOString().slice(0, 10)}`,
+      '',
+      `Neighborhood: ${p.nta_name}`,
+      `Borough: ${p.boro_name}`,
+      `2020 NTA code: ${p.nta_code}`,
+      '',
+      `Official 2023 HVI score: ${p.hvi_score} of 5`,
+      `Published surface temperature: ${Number(p.surface_temp_f).toFixed(1)}°F`,
+      `Published green space: ${Number(p.greenspace_pct).toFixed(1)}%`,
+      `Published households with AC: ${Number(p.households_ac_pct).toFixed(1)}%`,
+      '',
+      'SOURCE AND INTERPRETATION',
+      'NYC Department of Health and Mental Hygiene, 2023 Heat Vulnerability Index.',
+      'Geography: native 2020 Neighborhood Tabulation Area. No project crosswalk was applied.',
+      'Scores range from 1 (lowest relative vulnerability) to 5 (highest); a lower score does not mean no heat risk.',
+      'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/hvi/'
+    ];
+    const heatBlob = new Blob([heatLines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const heatLink = document.createElement('a');
+    heatLink.href = URL.createObjectURL(heatBlob);
+    heatLink.download = `${String(p.nta_code).toLowerCase()}-official-hvi-report.txt`;
+    document.body.appendChild(heatLink);
+    heatLink.click();
+    const heatObjectUrl = heatLink.href;
+    heatLink.remove();
+    setTimeout(() => URL.revokeObjectURL(heatObjectUrl), 1000);
+    return;
+  }
   const refs = currentReferences();
   const selectedWave = currentTreeWave === '2005' ? '2005–06' : '2015–16';
   const selectedTrees = currentTreeWave === '2005' ? p.trees_2005 : p.trees_2015;
   const selectedDensity = currentTreeWave === '2005' ? p.density_2005 : p.density_2015;
-  const score = Number(p.underserved);
-  const income = Number(p.median_income);
   const reportLines = [
     'NYC ENVIRONMENTAL ATLAS - NEIGHBORHOOD REPORT',
     `Generated: ${new Date().toISOString().slice(0, 10)}`,
@@ -910,8 +853,7 @@ function downloadNeighborhoodReport() {
     `Neighborhood: ${p.nta_name || 'Not available'}`,
     `Borough: ${p.boro_name || p.borough || 'Not available'}`,
     `NTA code: ${p.nta_code || 'Not available'}`,
-    `Area context: ${p.area_context || 'Not available'}`,
-    `Investment eligible: ${isInvestmentEligible(p) ? 'Yes' : 'No - context only'}`,
+    'Geography: native 2010 Neighborhood Tabulation Area',
     '',
     'STREET TREES',
     `Selected census wave: ${selectedWave}`,
@@ -921,21 +863,11 @@ function downloadNeighborhoodReport() {
     `Change, 2005–06 to 2015–16: ${formatReportNumber(p.tree_change)} trees (${formatReportNumber(p.pct_change, '%')})`,
     `2005 mapping coverage: ${formatReportNumber(p.tree_2005_mapping_coverage_pct, '%')}`,
     '',
-    'INCOME CONTEXT',
-    `Median household income (ACS ${p.income_source_year || 'latest'}): ${Number.isFinite(income) ? '$' + Math.round(income).toLocaleString() : 'Not available'}`,
-    `Income coverage: ${formatReportNumber(p.income_coverage_pct, '%')}`,
-    `Income estimate: ${p.income_estimated ? 'Yes - household-weighted tract approximation' : 'No'}`,
-    '',
-    'PROJECT SCREENING',
-    `Screening label: ${p.equity_label || 'Context only'}`,
-    `Screening score: ${Number.isFinite(score) && isInvestmentEligible(p) ? score.toFixed(3) : 'Not ranked'}`,
-    'Method: 55% tree-density percentile + 45% income percentile; screening is not a funding or causal conclusion.',
-    '',
     'INTERPRETATION',
     buildInterpretation(p, currentMetric, refs).text,
     '',
     'SOURCES AND LIMITATIONS',
-    'NYC Street Tree Census 2005–06 and 2015–16; ACS 2020–2024 household income via Census Reporter.',
+    'NYC Street Tree Census 2005–06 and 2015–16.',
     'Street-tree counts exclude park trees, private trees, forest, wetlands, and total canopy.',
     'Use this snapshot for exploration and prioritization, then verify local conditions and community evidence.'
   ];
@@ -966,23 +898,46 @@ function switchMetricTab(tabKey) {
 
   const metricLayers = {
     trees:`Tree Density (${currentTreeWave})`,
-    income:'Median Household Income',
-    equity:'Project Screening Score',
+    heat:'Heat Vulnerability Index (2023)',
   };
   const frame = document.getElementById('map-frame');
   if (frame && frame.contentWindow && metricLayers[tabKey]) {
-    Object.values(metricLayers).forEach(name =>
+    ['Tree Density (2015)', 'Tree Density (2005)',
+      'Heat Vulnerability Index (2023)'].forEach(name =>
       frame.contentWindow.postMessage({type:'toggle_layer', name:name, show:name === metricLayers[tabKey]}, '*')
     );
   }
-  if (currentNeighborhood) {
-    refreshInterpretation(currentNeighborhood, tabKey);
+  const activeRows = tabKey === 'heat' ? heatData : ntaData;
+  document.getElementById('nta-options').innerHTML = activeRows
+    .slice().sort((a,b) => String(a.nta_name).localeCompare(String(b.nta_name)))
+    .map(d => `<option value="${esc(d.nta_name)}">${esc(d.boro_name || d.borough || '')}</option>`).join('');
+  document.getElementById('nta-search').placeholder = tabKey === 'heat'
+    ? `Search ${heatData.length || 197} official HVI areas`
+    : `Search ${ntaData.length || 195} NYC areas`;
+  if (tabKey === 'heat' && currentHeatNeighborhood) {
+    updateHeatPanel(currentHeatNeighborhood);
+  } else if (tabKey !== 'heat' && currentTreeNeighborhood) {
+    updatePanel(currentTreeNeighborhood);
+    refreshInterpretation(currentTreeNeighborhood, tabKey);
+  } else {
+    document.getElementById('nta-data').classList.remove('visible');
+    document.getElementById('placeholder').style.display = 'flex';
+    document.getElementById('ph-count').textContent = tabKey === 'heat'
+      ? 'Click a 2020 NTA to view its official 2023 HVI record.'
+      : `${ntaData.length} areas ready. Click the map to explore one.`;
   }
 }
 
 window.addEventListener('message', function(e) {
   if (!e.data || e.data.type !== 'nta_click') return;
   const clicked = e.data.props || {};
+  if (clicked.dataset_geography === 'NTA2020') {
+    const heatProps = heatData.find(d => d.nta_code === clicked.nta_code) || clicked;
+    switchMetricTab('heat');
+    openHeatNeighborhood(heatProps, false);
+    return;
+  }
+  if (currentMetric !== 'trees') switchMetricTab('trees');
   const props = ntaData.find(d =>
     (clicked.nta_code && d.nta_code === clicked.nta_code) ||
     (!clicked.nta_code && d.nta_name === clicked.nta_name)
@@ -1012,38 +967,17 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-/* ── SCREENING SCORE DETAILS ───────────────────────────────── */
-function buildScoreDetails(p) {
-  const details = document.getElementById('tp-score-details');
-  if (!details) return;
-  if (!isInvestmentEligible(p) || !Number.isFinite(Number(p.underserved))) {
-    details.innerHTML = `<div class="score-note">This area stays on the map for context but does not compete with residential communities in the project ranking.</div>`;
-    return;
-  }
-  const density = Math.round(Number(p.density_2015) || 0).toLocaleString();
-  const income = Math.round(Number(p.median_income) || 0).toLocaleString();
-  details.innerHTML = `
-    <div class="score-breakdown">
-      <div class="score-part"><strong>${density} / km²</strong><span>Street-tree density, 55% of score</span></div>
-      <div class="score-part"><strong>$${income}</strong><span>Estimated median income, 45% of score</span></div>
-    </div>
-    <div class="score-note">Use this as a starting signal. Check heat, health, land use, and community evidence before funding.</div>`;
-}
-
 /* ── BOROUGH STATS ─────────────────────────────────────────── */
 function buildBoroughStats() {
   if (boroughBuilt || !ntaData.length) return;
   boroughBuilt = true;
 
-  // Aggregate by borough
   const agg = {};
-  ntaData.filter(isInvestmentEligible).forEach(function(d) {
+  ntaData.forEach(function(d) {
     const b = d.boro_name || d.borough || 'Unknown';
-    if (!agg[b]) agg[b] = { trees:0, density:[], income:[], underserved:0, ntaCount:0 };
+    if (!agg[b]) agg[b] = { trees:0, density:[], ntaCount:0 };
     agg[b].trees   += parseInt(d.trees_2015)||0;
     agg[b].density.push(parseFloat(d.density_2015)||0);
-    agg[b].income.push(parseInt(d.median_income)||0);
-    if ((parseFloat(d.underserved)||0) > 0.65) agg[b].underserved++;
     agg[b].ntaCount++;
   });
 
@@ -1051,8 +985,6 @@ function buildBoroughStats() {
   const boroughs = Object.entries(agg).map(([name,d]) => ({
     name, totalTrees:d.trees, ntaCount:d.ntaCount,
     avgDensity: avg(d.density),
-    avgIncome:  avg(d.income),
-    underservedCount: d.underserved,
   })).sort((a,b) => b.avgDensity - a.avgDensity);
 
   // Bar chart helper
@@ -1077,14 +1009,8 @@ function buildBoroughStats() {
   }
 
   const densityItems   = boroughs.map(b=>({ name:b.name, val:b.avgDensity,       display: Math.round(b.avgDensity).toLocaleString() }));
-  const incomeItems    = boroughs.map(b=>({ name:b.name, val:b.avgIncome,         display: '$'+Math.round(b.avgIncome/1000)+'k' }));
-  const undersvItems   = boroughs.sort((a,b2)=>b2.underservedCount-a.underservedCount)
-                          .map(b=>({ name:b.name, val:b.underservedCount, display: b.underservedCount+' NTAs' }));
-
   document.getElementById('borough-charts').innerHTML =
-    makeBarChart('AVG TREE DENSITY (trees / km²)', densityItems,  '#2fa05e') +
-    makeBarChart('AVG MEDIAN INCOME ($)',           incomeItems,   '#7c52e0') +
-    makeBarChart('HIGHER-SCORE AREAS (> 0.65)', undersvItems,  '#d94f00');
+    makeBarChart('AVG TREE DENSITY (trees / km²)', densityItems, '#2fa05e');
 
   // Re-sort by density for table
   const tableRows = [...boroughs].sort((a,b)=>b.avgDensity-a.avgDensity).map(b => `
@@ -1092,63 +1018,11 @@ function buildBoroughStats() {
       <td><strong>${b.name}</strong></td>
       <td class="mono-val">${b.totalTrees.toLocaleString()}</td>
       <td class="mono-val">${Math.round(b.avgDensity).toLocaleString()}</td>
-      <td class="mono-val">$${Math.round(b.avgIncome).toLocaleString()}</td>
-      <td class="mono-val">${b.underservedCount}</td>
     </tr>`).join('');
   document.getElementById('borough-tbody').innerHTML = tableRows;
 
   document.getElementById('borough-loading').style.display = 'none';
   document.getElementById('borough-content').style.display = 'block';
-}
-
-/* ── SCREENING SCORE RANKING ───────────────────────────────── */
-function buildScreeningIndex() {
-  if (screeningBuilt || !ntaData.length) return;
-  screeningBuilt = true;
-
-  const sorted = ntaData
-    .filter(d => isInvestmentEligible(d) && d.underserved != null && Number.isFinite(Number(d.underserved)))
-    .map(d => ({ ...d, _score: parseFloat(d.underserved)||0 }))
-    .sort((a,b) => b._score - a._score)
-    .slice(0, 20);
-
-  const maxScore = sorted[0] ? sorted[0]._score : 1;
-
-  const cards = sorted.map((d, i) => {
-    const score    = d._score;
-    const pct      = (score/maxScore)*100;
-    const lbl      = EQ[d.equity_label] || EQ.Middle;
-    const density  = (parseFloat(d.density_2015)||0).toFixed(0);
-    const income   = parseInt(d.median_income)||0;
-    const boro     = (d.boro_name||d.borough||'').toUpperCase();
-
-    return `<div class="screening-card">
-      <div class="screening-card-top">
-        <div>
-          <div class="screening-nta">${esc(d.nta_name||'Not available')}</div>
-          <div class="screening-boro">${esc(boro)}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="screening-rank">#${i+1}</div>
-          <div class="screening-label-badge" style="background:${lbl.bg};border:1px solid ${lbl.border};color:${lbl.text}">${esc(d.equity_label || 'Middle')}</div>
-        </div>
-      </div>
-      <div class="screening-bar-wrap">
-        <div class="screening-bar-track">
-          <div class="screening-bar-fill" style="width:${pct}%;background:${scoreToColor(score)}"></div>
-        </div>
-        <div class="screening-bar-ends"><span>LOWER SCORE</span><span>${score.toFixed(3)}</span></div>
-      </div>
-      <div class="screening-stats">
-        <div class="screening-stat">Density <span>${density} / km²</span></div>
-        <div class="screening-stat">Income <span>$${income.toLocaleString()}</span></div>
-      </div>
-    </div>`;
-  }).join('');
-
-  document.getElementById('screening-grid').innerHTML = cards;
-  document.getElementById('screening-loading').style.display = 'none';
-  document.getElementById('screening-content').style.display = 'block';
 }
 
 /* ── IFRAME INJECTION ──────────────────────────────────────── */
@@ -1271,43 +1145,29 @@ function injectIntoIframe() {
 }
 
 function buildFindings() {
-  const eligible = eligibleNeighborhoods();
-  if (!eligible.length) return;
-  const byDensity = eligible
+  if (!ntaData.length) return;
+  const byDensity = ntaData
     .filter(d => Number.isFinite(Number(d.density_2015)))
     .sort((a,b) => Number(a.density_2015) - Number(b.density_2015));
-  const byScore = eligible
-    .filter(d => Number.isFinite(Number(d.underserved)))
-    .sort((a,b) => Number(b.underserved) - Number(a.underserved));
-  const byGain = eligible
+  const byGain = ntaData
     .filter(d => Number.isFinite(Number(d.tree_change)))
     .sort((a,b) => Number(b.tree_change) - Number(a.tree_change));
   const low = byDensity[0];
   const high = byDensity[byDensity.length - 1];
-  const priority = byScore[0];
   const comeback = byGain[0];
-  const excluded = ntaData.length - eligible.length;
 
   if (low && high) document.getElementById('finding-spread').textContent =
     `${low.nta_name} has ${Math.round(Number(low.density_2015)).toLocaleString()} street trees per km², while ${high.nta_name} reaches ${Math.round(Number(high.density_2015)).toLocaleString()}. Same city, wildly different sidewalk shade.`;
-  if (priority) document.getElementById('finding-priority').textContent =
-    `${priority.nta_name} currently tops the project screening score. That makes it a smart place to investigate next, not an automatic funding verdict.`;
   if (comeback) document.getElementById('finding-change').textContent =
     `${comeback.nta_name} posted the biggest street-tree gain, adding ${Math.round(Number(comeback.tree_change)).toLocaleString()} trees between the 2005–06 and 2015–16 census waves. A proper tree comeback.`;
-  document.getElementById('finding-guardrail').textContent =
-    `${excluded} non-residential or low-coverage areas stay visible but sit out the rankings. Airports and cemeteries do not get to compete with communities.`;
 }
 
 function resetDerivedViews() {
   boroughBuilt = false;
-  screeningBuilt = false;
   document.getElementById('borough-charts').innerHTML = '';
   document.getElementById('borough-tbody').innerHTML = '';
   document.getElementById('borough-loading').style.display = '';
   document.getElementById('borough-content').style.display = 'none';
-  document.getElementById('screening-grid').innerHTML = '';
-  document.getElementById('screening-loading').style.display = '';
-  document.getElementById('screening-content').style.display = 'none';
 }
 
 function setNeighborhoodData(rows) {
@@ -1316,13 +1176,13 @@ function setNeighborhoodData(rows) {
     if (row && row.nta_code && row.nta_name && !byCode.has(row.nta_code)) byCode.set(row.nta_code, row);
   });
   const validated = Array.from(byCode.values());
-  if (validated.length !== rows.length || validated.length < 190 || validated.filter(isInvestmentEligible).length < 150) {
+  if (validated.length !== rows.length || validated.length !== 195 ||
+      !validated.every(row => row.dataset_geography === 'NTA2010' && Number(row.geography_vintage) === 2010)) {
     throw new Error('Neighborhood snapshot did not pass client-side completeness checks');
   }
   ntaData = validated;
   resetDerivedViews();
   buildBoroughStats();
-  buildScreeningIndex();
   buildFindings();
 
   document.getElementById('nta-options').innerHTML = ntaData
@@ -1333,17 +1193,12 @@ function setNeighborhoodData(rows) {
 
   const sample = ntaData[0] || {};
   const treeYear = Number(sample.tree_source_year) || 2015;
-  const incomeYear = Number(sample.income_source_year);
-  const eligibleCount = eligibleNeighborhoods().length;
   document.getElementById('ph-count').textContent = `${ntaData.length} areas ready. Click the map to explore one.`;
-  document.getElementById('nav-vintage').textContent = incomeYear
-    ? `Trees ${treeYear} • ACS ${incomeYear}`
-    : `Trees ${treeYear}`;
+  document.getElementById('nav-vintage').textContent = `Trees ${treeYear} · HVI 2023`;
   document.getElementById('data-status').innerHTML = `
-    <span><strong>VALIDATED</strong> ${ntaData.length} unique areas</span>
-    <span>${eligibleCount} residential/community areas ranked</span>
-    <span>${ntaData.length - eligibleCount} context areas excluded</span>
-    <span>Trees ${treeYear}${incomeYear ? ` • ACS ${incomeYear - 4}–${incomeYear}` : ''}</span>
+    <span><strong>VALIDATED</strong> ${ntaData.length} tree NTAs · ${heatData.length || 197} HVI NTAs</span>
+    <span>Trees: 2010 NTA geography</span>
+    <span>HVI 2023: 2020 NTA geography</span>
     <a href="docs/methodology.md">How this works</a>`;
 
   const hashKey = decodeURIComponent((window.location.hash.match(/^#nta=(.+)$/) || [])[1] || '').toLowerCase();
@@ -1354,6 +1209,32 @@ function setNeighborhoodData(rows) {
       [700, 1800, 3400, 5200].forEach(delay => {
         setTimeout(() => zoomToNTA(linked.nta_name), delay);
       });
+    }
+  }
+}
+
+function setHeatData(rows) {
+  const byCode = new Map();
+  rows.forEach(row => {
+    if (row && row.nta_code && !byCode.has(row.nta_code)) byCode.set(row.nta_code, row);
+  });
+  const validated = Array.from(byCode.values());
+  const scoresValid = validated.every(row =>
+    row.dataset_geography === 'NTA2020' &&
+    Number(row.geography_vintage) === 2020 &&
+    Number(row.hvi_source_year) === 2023 &&
+    Number(row.hvi_score) >= 1 && Number(row.hvi_score) <= 5
+  );
+  if (validated.length !== 197 || validated.length !== rows.length || !scoresValid) {
+    throw new Error('Official HVI snapshot did not pass client-side completeness checks');
+  }
+  heatData = validated;
+  const hashKey = decodeURIComponent((window.location.hash.match(/^#heat=(.+)$/) || [])[1] || '').toLowerCase();
+  if (hashKey) {
+    const linked = heatData.find(d => String(d.nta_code).toLowerCase() === hashKey || String(d.nta_name).toLowerCase() === hashKey);
+    if (linked) {
+      switchMetricTab('heat');
+      openHeatNeighborhood(linked, false);
     }
   }
 }
@@ -1377,9 +1258,28 @@ async function extractNeighborhoodData() {
     }
   }
   console.warn('Validated neighborhood data unavailable', errors);
-  document.getElementById('data-status').innerHTML = '<span><strong>DATA UNAVAILABLE</strong> Rankings are hidden rather than showing stale values.</span><a href="docs/methodology.md">Methodology</a>';
-  document.getElementById('borough-loading').textContent = 'Validated data unavailable. Rankings are hidden.';
-  document.getElementById('screening-loading').textContent = 'Validated data unavailable. Rankings are hidden.';
+  document.getElementById('data-status').innerHTML = '<span><strong>DATA UNAVAILABLE</strong> The map is hidden rather than showing stale values.</span><a href="docs/methodology.md">Methodology</a>';
+  document.getElementById('borough-loading').textContent = 'Validated tree data unavailable.';
+}
+
+async function extractHeatData() {
+  const urls = [
+    'data/processed/nta2020_heat_vulnerability.geojson',
+    'https://j3ssc0des.github.io/Enviromental-Equity-In-NYC/data/processed/nta2020_heat_vulnerability.geojson',
+  ];
+  const errors = [];
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, { cache:'no-cache', credentials:'omit' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const geojson = await response.json();
+      setHeatData((geojson.features || []).map(feature => feature.properties || {}));
+      return;
+    } catch (error) {
+      errors.push(`${url}: ${error.message}`);
+    }
+  }
+  console.warn('Official HVI data unavailable', errors);
 }
 
 mapFrame.addEventListener('load', function() {
@@ -1387,12 +1287,17 @@ mapFrame.addEventListener('load', function() {
 });
 
 extractNeighborhoodData();
+extractHeatData();
 
 document.getElementById('nta-search').addEventListener('change', function() {
   const query = this.value.trim().toLowerCase();
-  const match = ntaData.find(d => String(d.nta_name || '').toLowerCase() === query)
-    || ntaData.find(d => String(d.nta_name || '').toLowerCase().startsWith(query));
-  if (match) openNeighborhood(match, true);
+  const rows = currentMetric === 'heat' ? heatData : ntaData;
+  const match = rows.find(d => String(d.nta_name || '').toLowerCase() === query)
+    || rows.find(d => String(d.nta_name || '').toLowerCase().startsWith(query));
+  if (match) {
+    if (currentMetric === 'heat') openHeatNeighborhood(match, true);
+    else openNeighborhood(match, true);
+  }
 });
 
 document.getElementById('nta-search').addEventListener('keydown', function(event) {
@@ -1434,7 +1339,6 @@ document.querySelectorAll('.nav-tab').forEach(function(btn) {
 
     // Build tab content on first visit (data may have loaded by now)
     if (tab === 'borough') buildBoroughStats();
-    if (tab === 'screening')    buildScreeningIndex();
   });
 });
 

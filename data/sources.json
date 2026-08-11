@@ -3,8 +3,9 @@
   {"id":"29bw-z7pj","name":"2005 Street Tree Census","kind":"socrata","required_fields":["nta_name","boroname"],"reference_year":2005,"status":"active"},
   {"id":"8ius-dhrr","name":"2010 tract-to-NTA crosswalk","kind":"socrata","required_fields":["neighborhood_tabulation_area_nta_code","_2010_census_tract"],"reference_year":2010,"status":"active"},
   {"id":"c3uy-2p5r","name":"Environment and Health indicators","kind":"socrata","required_fields":["name","geo_type_name","data_value","time_period"],"status":"catalogued"},
-  {"id":"4mhf-duep","name":"Heat Vulnerability Index Rankings","kind":"socrata","required_fields":["zcta20","hvi"],"status":"next"},
+  {"id":"nyc-dohmh-hvi-nta2020","name":"2023 Heat Vulnerability Index on 2020 NTAs","kind":"static_csv","url":"https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/hvi/hvi-nta-2020.csv","required_fields":["NTACode","GEONAME","HVI_RANK","SURFACE_TEMP","GREENSPACE","PCT_HOUSEHOLDS_AC"],"reference_year":2023,"status":"active"},
+  {"id":"9nt8-h7nd","name":"2020 Neighborhood Tabulation Areas","kind":"socrata","required_fields":["nta2020","ntaname","boroname","the_geom"],"reference_year":2020,"status":"active"},
   {"id":"mrjc-v9pm","name":"NYC Flood Vulnerability Index","kind":"socrata","required_fields":["geoid"],"status":"next"},
   {"id":"by9k-vhck","name":"Retired canopy-change candidate (unavailable)","kind":"socrata","required_fields":[],"reference_year":2017,"status":"retired"},
-  {"id":"census-reporter-acs5","name":"Latest ACS five-year income","kind":"census_reporter","required_fields":["B19013001","B11001001"],"reference_year":2024,"max_reference_lag_years":2,"update_cadence":"annual","status":"active"}
+  {"id":"census-reporter-acs5","name":"ACS five-year income candidate","kind":"census_reporter","required_fields":["B19013001","B11001001"],"reference_year":2024,"status":"catalogued"}
 ]

@@ -8,6 +8,11 @@ const TREE_2005_SOURCE = {
   url: 'https://data.cityofnewyork.us/d/29bw-z7pj',
 };
 
+const HVI_SOURCE = {
+  label: 'NYC DOHMH Heat Vulnerability Index 2023',
+  url: 'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/hvi/',
+};
+
 function finite(value) {
   if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
@@ -35,64 +40,25 @@ function historicalDirection(properties) {
   return `The recorded count ${change > 0 ? 'rose' : 'fell'} ${strength}between the 2005–06 and 2015–16 census waves.`;
 }
 
-function scorePosition(value) {
-  const score = finite(value);
-  if (score === null) return 'unavailable';
-  if (score >= 0.75) return 'higher';
-  if (score >= 0.55) return 'elevated';
-  if (score >= 0.35) return 'middle';
-  return 'lower';
-}
-
-function incomeSource(properties) {
-  const year = finite(properties.income_source_year);
-  return {
-    label: year === null ? 'ACS household income' : `ACS ${Math.round(year)} household income`,
-    url: year === null
-      ? 'https://www.census.gov/programs-surveys/acs'
-      : `https://api.census.gov/data/${Math.round(year)}/acs/acs5.html`,
-  };
-}
-
-function contextOnlyInterpretation(properties) {
-  const name = properties.nta_name || 'This area';
-  if (properties.area_context === 'Insufficient income coverage') {
-    return `${name} is shown for context but excluded from comparisons because income coverage is below the project’s quality threshold. No screening conclusion is generated.`;
-  }
-  return `${name} is a non-residential planning area shown for geographic context. It is excluded from community comparisons so land-intensive places do not displace residential neighborhoods.`;
-}
-
 export function buildInterpretation(properties, metric, references = {}) {
   const p = properties || {};
   const name = p.nta_name || 'This neighborhood';
-  if (p.investment_eligible !== true) {
-    return { text: contextOnlyInterpretation(p), sources: [] };
+  if (metric === 'heat') {
+    const score = finite(p.hvi_score);
+    if (score === null || score < 1 || score > 5) {
+      return { text: 'An official Heat Vulnerability Index score is not available for this 2020 NTA.', sources: [HVI_SOURCE] };
+    }
+    return {
+      text: `${name} has an official 2023 Heat Vulnerability Index score of ${Math.round(score)} out of 5 on NYC’s 2020 NTA geography. A score of 1 is the lowest relative vulnerability and 5 is the highest; a lower score does not mean no heat risk.`,
+      sources: [HVI_SOURCE],
+    };
   }
-
   const treeWave = references.treeWave === '2005' ? '2005–06' : '2015–16';
   const densityField = references.treeWave === '2005' ? 'density_2005' : 'density_2015';
   const densityPosition = comparison(p[densityField], references.density);
-  const incomePosition = comparison(p.median_income, references.income);
-
-  if (metric === 'income') {
-    if (finite(p.median_income) === null) {
-      return { text: 'A sufficiently covered household-income estimate is not available for this area.', sources: [incomeSource(p)] };
-    }
-    return {
-      text: `${name}’s estimated median household income is ${incomePosition} the eligible-area median. This adds socioeconomic context to the tree patterns but does not explain why environmental conditions differ; the value is a household-weighted ACS approximation.`,
-      sources: [incomeSource(p)],
-    };
-  }
-
-  if (metric === 'equity') {
-    return {
-      text: `The project screening score places ${name} toward the ${scorePosition(p.underserved)} end of eligible areas. It combines tree density that is ${densityPosition} the ranked-area average with estimated income that is ${incomePosition} the eligible-area median; use it to identify questions, not to make a funding decision.`,
-      sources: [TREE_2015_SOURCE, incomeSource(p)],
-    };
-  }
 
   return {
-    text: `${name}’s street-tree density in the ${treeWave} census wave is ${densityPosition} the ranked-area average. ${historicalDirection(p)} Street-tree census counts do not include total canopy, park trees, or private-property trees.`,
+    text: `${name}’s street-tree density in the ${treeWave} census wave is ${densityPosition} the citywide density across 2010 NTAs. ${historicalDirection(p)} Street-tree census counts do not include total canopy, park trees, or private-property trees.`,
     sources: [TREE_2015_SOURCE, TREE_2005_SOURCE],
   };
 }
