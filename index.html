@@ -644,6 +644,14 @@ let currentTreeNeighborhood = null;
 let currentHeatNeighborhood = null;
 let currentMetric = 'trees';
 let currentTreeWave = '2015';
+let currentMapLocation = null;
+const THEMATIC_MAP_LAYERS = [
+  'Tree Density (2015)',
+  'Tree Density (2005)',
+  'Tree Change 2005→2015',
+  'Tree Density Heatmap',
+  'Heat Vulnerability Index (2023)',
+];
 
 function isStandardNeighborhoodNTA(row) {
   // NYC's 2010 NTA codes ending in 98 or 99 represent special-purpose areas
@@ -658,6 +666,7 @@ function currentReferences(treeWave = currentTreeWave) {
   const totalArea = rows.reduce((sum,d) => sum + (Number(d.area_km2) || 0), 0);
   return {
     rows,
+    heatRows: heatData,
     treeWave,
     density: totalArea > 0 ? totalTrees / totalArea : 0,
   };
@@ -802,7 +811,7 @@ function setTreeWave(wave) {
   currentTreeWave = wave;
   const frame = document.getElementById('map-frame');
   if (frame && frame.contentWindow && currentMetric === 'trees') {
-    ['Tree Density (2015)', 'Tree Density (2005)', 'Heat Vulnerability Index (2023)'].forEach(name =>
+    THEMATIC_MAP_LAYERS.forEach(name =>
       frame.contentWindow.postMessage({type:'toggle_layer', name, show:name === `Tree Density (${wave})`}, '*')
     );
   }
@@ -889,7 +898,7 @@ function downloadNeighborhoodReport() {
 }
 
 /* ── METRIC TAB SWITCH (inside right panel) ────────────────── */
-function switchMetricTab(tabKey) {
+function switchMetricTab(tabKey, preserveLocation = false) {
   currentMetric = tabKey;
   document.querySelectorAll('.mtab').forEach(b => {
     b.classList.remove('active');
@@ -908,10 +917,19 @@ function switchMetricTab(tabKey) {
   };
   const frame = document.getElementById('map-frame');
   if (frame && frame.contentWindow && metricLayers[tabKey]) {
-    ['Tree Density (2015)', 'Tree Density (2005)',
-      'Heat Vulnerability Index (2023)'].forEach(name =>
+    THEMATIC_MAP_LAYERS.forEach(name =>
       frame.contentWindow.postMessage({type:'toggle_layer', name:name, show:name === metricLayers[tabKey]}, '*')
     );
+    if (preserveLocation && currentNeighborhood) {
+      frame.contentWindow.postMessage({
+        type:'select_at_location',
+        targetLayer:metricLayers[tabKey],
+        sourceNtaName:currentNeighborhood.nta_name,
+        sourceGeography:currentNeighborhood.dataset_geography,
+        lat:currentMapLocation && currentMapLocation.lat,
+        lng:currentMapLocation && currentMapLocation.lng,
+      }, '*');
+    }
   }
   const activeRows = tabKey === 'heat' ? heatData : ntaData;
   document.getElementById('nta-options').innerHTML = activeRows
@@ -920,7 +938,11 @@ function switchMetricTab(tabKey) {
   document.getElementById('nta-search').placeholder = tabKey === 'heat'
     ? `Search ${heatData.length || 197} official HVI areas`
     : `Search ${ntaData.length || 195} NYC areas`;
-  if (tabKey === 'heat' && currentHeatNeighborhood) {
+  if (preserveLocation && currentNeighborhood) {
+    document.getElementById('nta-data').classList.remove('visible');
+    document.getElementById('placeholder').style.display = 'flex';
+    document.getElementById('ph-count').textContent = 'Matching the same map location to this dataset’s native NTA geography…';
+  } else if (tabKey === 'heat' && currentHeatNeighborhood) {
     updateHeatPanel(currentHeatNeighborhood);
   } else if (tabKey !== 'heat' && currentTreeNeighborhood) {
     updatePanel(currentTreeNeighborhood);
@@ -936,6 +958,9 @@ function switchMetricTab(tabKey) {
 
 window.addEventListener('message', function(e) {
   if (!e.data || e.data.type !== 'nta_click') return;
+  if (Number.isFinite(Number(e.data.lat)) && Number.isFinite(Number(e.data.lng))) {
+    currentMapLocation = { lat:Number(e.data.lat), lng:Number(e.data.lng) };
+  }
   const clicked = e.data.props || {};
   if (clicked.dataset_geography === 'NTA2020') {
     const heatProps = heatData.find(d => d.nta_code === clicked.nta_code) || clicked;
@@ -1075,7 +1100,10 @@ function injectIntoIframe() {
               if(!_handledIds[lid]){
                 _handledIds[lid]=true;
                 sub.on('click',function(e){
-                  window.parent.postMessage({type:'nta_click',props:e.target.feature.properties},'*');
+                  window.parent.postMessage({
+                    type:'nta_click',props:e.target.feature.properties,
+                    lat:e.latlng&&e.latlng.lat,lng:e.latlng&&e.latlng.lng
+                  },'*');
                 });
               }
             }
@@ -1142,6 +1170,35 @@ function injectIntoIframe() {
         }
         if(msg.data.type==='toggle_layer'){
           if(window.__toggleLayer) window.__toggleLayer(msg.data.name, msg.data.show);
+        }
+        if(msg.data.type==='select_at_location'){
+          var target=window.__layerMap[msg.data.targetLayer];
+          if(!target) return;
+          var lat=Number(msg.data.lat),lng=Number(msg.data.lng),point=null;
+          if(Number.isFinite(lat)&&Number.isFinite(lng)) point=L.latLng(lat,lng);
+          if(!point&&msg.data.sourceNtaName){
+            Object.values(window.__layerMap||{}).forEach(function(layer){
+              if(point) return;
+              walkFeatures(layer,function(sub){
+                if(point||!sub.feature||!sub.getBounds) return;
+                var p=sub.feature.properties||{};
+                if(p.nta_name===msg.data.sourceNtaName&&p.dataset_geography===msg.data.sourceGeography){
+                  point=typeof sub.getCenter==='function'?sub.getCenter():sub.getBounds().getCenter();
+                }
+              });
+            });
+          }
+          if(!point) return;
+          var selected=null,layerPoint=map.latLngToLayerPoint(point);
+          walkFeatures(target,function(sub){
+            if(selected||!sub.feature||!sub.getBounds||!sub.getBounds().contains(point)) return;
+            if(typeof sub._containsPoint!=='function'||sub._containsPoint(layerPoint)) selected=sub;
+          });
+          if(selected){
+            window.parent.postMessage({
+              type:'nta_click',props:selected.feature.properties,lat:point.lat,lng:point.lng
+            },'*');
+          }
         }
       });
     })();`;
@@ -1361,7 +1418,7 @@ document.querySelectorAll('.mtab').forEach(function(btn) {
   btn.addEventListener('click', function() {
     document.querySelectorAll('.mtab').forEach(b => b.setAttribute('aria-selected', 'false'));
     this.setAttribute('aria-selected', 'true');
-    switchMetricTab(this.dataset.tab);
+    switchMetricTab(this.dataset.tab, true);
   });
 });
 

@@ -438,6 +438,7 @@ HeatMap(heat_pts, min_opacity=0.3, radius=25, blur=20,
         gradient={"0.3":"#052e16","0.6":"#15803d","0.85":"#86efac","1.0":"#ffffff"}
         ).add_to(heat_fg)
 heat_fg.add_to(m)
+_atlas_layer_vars["Tree Density Heatmap"] = heat_fg.get_name()
 
 # ── Layer control ────────────────────────────────────────────────
 LayerControl(collapsed=True, position="topright").add_to(m)
