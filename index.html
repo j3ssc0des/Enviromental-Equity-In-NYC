@@ -1482,9 +1482,6 @@ function setNeighborhoodData(rows) {
     const linked = ntaData.find(d => String(d.nta_code || '').toLowerCase() === hashKey || String(d.nta_name || '').toLowerCase() === hashKey);
     if (linked) {
       openNeighborhood(linked, false);
-      [700, 1800, 3400, 5200].forEach(delay => {
-        setTimeout(() => zoomToNTA(linked.nta_name), delay);
-      });
     }
   }
 }

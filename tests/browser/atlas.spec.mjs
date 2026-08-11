@@ -160,6 +160,30 @@ test('clicking empty map space clears the selected neighborhood', async ({ page 
   await expect(page).not.toHaveURL(/#(?:nta|heat)=/);
 });
 
+test('reloading a selected neighborhood preserves the default map view', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.startsWith('mobile'), 'covered by desktop interaction test');
+  await waitForAtlas(page);
+  const readView = () => page.locator('#map-frame').evaluate(frame => {
+    const map = Object.values(frame.contentWindow).find(value =>
+      value && typeof value === 'object' && value.getZoom && value.getCenter
+    );
+    const center = map.getCenter();
+    return { zoom:map.getZoom(), lat:center.lat, lng:center.lng };
+  });
+  const defaultView = await readView();
+
+  await selectTreeNeighborhood(page, 'Upper East Side-Carnegie Hill');
+  await expect(page).toHaveURL(/#nta=MN40$/);
+  await page.reload();
+  await expect(page.locator('#data-status')).toContainText('VALIDATED');
+  await page.waitForFunction(() => document.documentElement.dataset.treeReady === 'true');
+  await expect(page.locator('#nta-data')).toHaveClass(/visible/);
+  await expect(page.locator('#nta-name')).toHaveText('Upper East Side-Carnegie Hill');
+  await page.waitForTimeout(900);
+
+  expect(await readView()).toEqual(defaultView);
+});
+
 test('combined report contains separate tree and heat records', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.startsWith('mobile'), 'covered by desktop interaction test');
   await waitForAtlas(page);
