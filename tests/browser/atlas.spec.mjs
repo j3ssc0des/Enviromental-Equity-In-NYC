@@ -118,6 +118,16 @@ test('predictive neighborhood search replaces the current value without manual c
   await suggestions.first().click();
   await expect(page.locator('#nta-name')).toHaveText('Upper East Side-Carnegie Hill');
   await expect(search).toHaveValue('Upper East Side-Carnegie Hill');
+  const mapFrame = page.frameLocator('#map-frame');
+  const selectedPath = mapFrame.locator('path.atlas-selected').first();
+  await expect(selectedPath).toBeVisible();
+  await expect(mapFrame.locator('.atlas-selected-label')).toContainText('Selected');
+  const selectedColors = await selectedPath.evaluate(path => {
+    const style = getComputedStyle(path);
+    return { stroke:style.stroke, fill:style.fill };
+  });
+  expect(selectedColors.stroke).toBe('rgb(77, 216, 255)');
+  expect(selectedColors.fill).not.toBe('rgb(77, 216, 255)');
   const viewAfterSearch = await page.locator('#map-frame').evaluate(frame => {
     const map = Object.values(frame.contentWindow).find(value => value && typeof value === 'object' && value.getZoom && value.getCenter);
     const center = map.getCenter();
