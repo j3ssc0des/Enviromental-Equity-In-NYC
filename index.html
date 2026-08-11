@@ -1094,6 +1094,10 @@ window.addEventListener('message', function(e) {
     }
     return;
   }
+  if (e.data && e.data.type === 'map_clear_selection') {
+    clearNeighborhoodSelection();
+    return;
+  }
   if (!e.data || e.data.type !== 'nta_click') return;
   if (Number.isFinite(Number(e.data.lat)) && Number.isFinite(Number(e.data.lng))) {
     currentMapLocation = { lat:Number(e.data.lat), lng:Number(e.data.lng) };
@@ -1123,6 +1127,22 @@ function resetHighlights() {
   const frame = document.getElementById('map-frame');
   if (frame && frame.contentWindow)
     frame.contentWindow.postMessage({type:'clear_highlights'}, '*');
+}
+function clearNeighborhoodSelection() {
+  resetHighlights();
+  currentNeighborhood = null;
+  currentTreeNeighborhood = null;
+  currentHeatNeighborhood = null;
+  currentMapLocation = null;
+  const search = document.getElementById('nta-search');
+  search.value = '';
+  closeSearchSuggestions();
+  document.getElementById('nta-data').classList.remove('visible');
+  document.getElementById('placeholder').style.display = 'flex';
+  document.getElementById('ph-count').textContent = currentMetric === 'heat'
+    ? 'Click a 2020 NTA to view its official 2023 HVI record.'
+    : `${ntaData.length || 195} areas ready. Click the map to explore one.`;
+  if (history.replaceState) history.replaceState(null, '', location.pathname + location.search);
 }
 function zoomToNTA(ntaName) {
   const frame = document.getElementById('map-frame');
@@ -1220,14 +1240,6 @@ function injectIntoIframe() {
         animation: atlasSelectionPulse .8s ease-out 1;
         stroke-linejoin: round;
       }
-      .atlas-selected-label {
-        display:flex;align-items:center;gap:5px;transform:translate(-50%,-100%);
-        width:max-content;padding:4px 7px;border-radius:4px;
-        background:rgba(7,16,24,.94);border:1px solid #4DD8FF;color:#e9fbff;
-        box-shadow:0 2px 10px rgba(0,0,0,.55);font:600 10px/1 'DM Sans',sans-serif;
-        letter-spacing:.06em;text-transform:uppercase;pointer-events:none;
-      }
-      .atlas-selected-label span { width:6px;height:6px;border-radius:50%;background:#4DD8FF; }
     `;
     iDoc.head.appendChild(selectionStyle);
 
@@ -1280,6 +1292,11 @@ function injectIntoIframe() {
       Object.values(window.__layerMap).forEach(function(l){attach(l);});
       /* Safety net: re-attach if a layer is toggled on after initial load. */
       map.on('overlayadd',function(e){attach(e.layer);});
+      map.on('click',function(e){
+        var target=e.originalEvent&&e.originalEvent.target;
+        if(target&&target.closest&&target.closest('path.leaflet-interactive')) return;
+        window.parent.postMessage({type:'map_clear_selection'},'*');
+      });
 
       window.__toggleLayer=function(name,show){
         var layer=window.__layerMap[name];
@@ -1316,7 +1333,6 @@ function injectIntoIframe() {
         if(!msg.data) return;
         if(msg.data.type==='highlight_nta'){
           var nta=msg.data.nta_name,color=msg.data.color||'#4DD8FF',weight=msg.data.weight||4;
-          var markerPlaced=false;
           Object.values(window.__layerMap||{}).forEach(function(layer){
             if(!map.hasLayer(layer)) return;
             walkFeatures(layer,function(sub){
@@ -1328,15 +1344,6 @@ function injectIntoIframe() {
                 sub.setStyle({color:color,weight:weight,opacity:1});
                 if(sub.bringToFront) sub.bringToFront();
                 if(sub._path) sub._path.classList.add('atlas-selected');
-                if(!markerPlaced&&sub.getBounds){
-                  markerPlaced=true;
-                  if(window.__atlasSelectionMarker) map.removeLayer(window.__atlasSelectionMarker);
-                  var center=typeof sub.getCenter==='function'?sub.getCenter():sub.getBounds().getCenter();
-                  window.__atlasSelectionMarker=L.marker(center,{
-                    interactive:false,keyboard:false,pane:'tooltipPane',
-                    icon:L.divIcon({className:'',html:'<div class="atlas-selected-label"><span></span>Selected</div>',iconSize:null})
-                  }).addTo(map);
-                }
               }
             });
           });
@@ -1351,10 +1358,6 @@ function injectIntoIframe() {
               }
             });
           });
-          if(window.__atlasSelectionMarker){
-            map.removeLayer(window.__atlasSelectionMarker);
-            window.__atlasSelectionMarker=null;
-          }
         }
         if(msg.data.type==='zoom_to_nta'){
           var znta=msg.data.nta_name,zfound=false;
