@@ -5,7 +5,7 @@ async function waitForAtlas(page) {
   await page.goto('/');
   await expect(page.locator('#data-status')).toContainText('VALIDATED');
   await page.waitForFunction(() => document.documentElement.dataset.treeReady === 'true' &&
-    document.documentElement.dataset.heatReady === 'true');
+    document.documentElement.dataset.heatReady === 'true' && document.documentElement.dataset.floodReady === 'true');
   const mapFrame = page.frameLocator('#map-frame');
   await expect(mapFrame.locator('.leaflet-container')).toBeVisible();
   await page.waitForFunction(() => {
@@ -196,10 +196,24 @@ test('combined report contains separate tree and heat records', async ({ page },
   const report = await readFile(path, 'utf8');
   expect(report).toContain('SECTION 1 - STREET TREES (NATIVE 2010 NTA)');
   expect(report).toContain('SECTION 2 - HEAT VULNERABILITY (NATIVE 2020 NTA)');
+  expect(report).toContain('SECTION 3 - FLOOD VULNERABILITY (NATIVE CENSUS TRACT)');
   expect(report).toContain('2010 NTA code:');
   expect(report).toContain('2020 NTA code:');
   expect(report).not.toContain('No official tree NTA record could be resolved');
   expect(report).not.toContain('No official HVI NTA record could be resolved');
+  expect(report).not.toContain('No official FVI census-tract record could be resolved');
+});
+
+test('flood mode preserves location and shows official tract data', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.startsWith('mobile'), 'covered by desktop interaction test');
+  await waitForAtlas(page);
+  await selectTreeNeighborhood(page, 'Starrett City');
+  await page.locator('.mtab[data-tab="flood"]').click();
+  await expect(page).toHaveURL(/#flood=/);
+  await expect(page.locator('#nta-boro')).toContainText('CENSUS TRACT');
+  await expect(page.locator('#eq-badge')).toHaveText('OFFICIAL FVI');
+  await expect(page.frameLocator('#map-frame').locator('#leg-flood')).toBeVisible();
+  await expect(page.locator('#tp-flood-fshri')).toContainText('/ 5');
 });
 
 test('mobile layout keeps map controls and metric tabs usable', async ({ page }, testInfo) => {
@@ -208,6 +222,7 @@ test('mobile layout keeps map controls and metric tabs usable', async ({ page },
   await expect(page.locator('#map-frame')).toBeVisible();
   await expect(page.locator('.mtab[data-tab="trees"]')).toBeVisible();
   await expect(page.locator('.mtab[data-tab="heat"]')).toBeVisible();
+  await expect(page.locator('.mtab[data-tab="flood"]')).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });

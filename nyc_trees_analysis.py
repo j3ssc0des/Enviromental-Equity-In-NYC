@@ -30,6 +30,7 @@ warnings.filterwarnings("ignore")
 OUTPUT_HTML = "nyc_trees_map.html"
 OUTPUT_DATA = "data/processed/nta_environmental_snapshot.geojson"
 OUTPUT_HEAT_DATA = "data/processed/nta2020_heat_vulnerability.geojson"
+OUTPUT_FLOOD_DATA = "data/processed/census_tract_flood_vulnerability.geojson"
 # ────────────────────────────────────────────────────────────────
 
 print("=" * 65)
@@ -68,6 +69,7 @@ live_ok = False
 tree_2005_unassigned_count = 0
 tree_2005_mapping_coverage_pct = 100.0
 heat_gdf = None
+flood_gdf = None
 
 try:
     import requests
@@ -227,6 +229,31 @@ try:
     heat_gdf["dataset_geography"] = "NTA2020"
     heat_gdf["data_mode"] = "official"
     print(f"   ✓ {len(heat_gdf)} official HVI neighborhoods matched directly to 2020 NTA codes")
+
+    print("📡 Fetching NYC Flood Vulnerability Index on native census tracts…")
+    flood_response = _fetch(
+        "https://data.cityofnewyork.us/resource/mrjc-v9pm.geojson",
+        params={"$limit": "3000"},
+    )
+    flood_gdf = gpd.GeoDataFrame.from_features(
+        flood_response.json().get("features", []), crs="EPSG:4326"
+    )
+    required_flood = {"geoid", "fshri", "ss_cur", "ss_50s", "ss_80s", "tid_20s", "tid_50s", "tid_80s", "geometry"}
+    missing_flood = sorted(required_flood - set(flood_gdf.columns))
+    if missing_flood:
+        raise ValueError(f"Official FVI data are missing fields: {missing_flood}")
+    if len(flood_gdf) != 2209 or flood_gdf["geoid"].duplicated().any():
+        raise ValueError(f"Official FVI tract coverage is invalid: {len(flood_gdf)} rows")
+    score_fields = ["fshri", "ss_cur", "ss_50s", "ss_80s", "tid_20s", "tid_50s", "tid_80s"]
+    for field in score_fields:
+        flood_gdf[field] = pd.to_numeric(flood_gdf[field], errors="coerce").astype("Int64")
+        if not flood_gdf[field].dropna().between(1, 5).all():
+            raise ValueError(f"Official FVI field {field} falls outside the published 1–5 range")
+    flood_gdf["tract_name"] = flood_gdf["geoid"].map(lambda value: f"Census tract {str(value)[5:9].lstrip('0') or '0'}.{str(value)[9:]}".rstrip(".0"))
+    flood_gdf["dataset_geography"] = "CensusTract"
+    flood_gdf["data_mode"] = "official"
+    flood_gdf["fvi_source_release"] = 2024
+    print(f"   ✓ {len(flood_gdf)} official FVI census tracts loaded")
     live_ok = True
 
     print(f"\n✅ Live data loaded: {len(merged)} NTAs · "
@@ -282,6 +309,14 @@ heat_export_cols = [
     "geography_vintage", "dataset_geography", "data_mode", "geometry",
 ]
 heat_gdf[heat_export_cols].to_file(OUTPUT_HEAT_DATA, driver="GeoJSON")
+if flood_gdf is None:
+    raise RuntimeError("Official Flood Vulnerability Index data are required for publication")
+flood_export_cols = [
+    "geoid", "tract_name", "fshri", "ss_cur", "ss_50s", "ss_80s",
+    "tid_20s", "tid_50s", "tid_80s", "fvi_source_release",
+    "dataset_geography", "data_mode", "geometry",
+]
+flood_gdf[flood_export_cols].to_file(OUTPUT_FLOOD_DATA, driver="GeoJSON")
 
 # ════════════════════════════════════════════════════════════════
 # 4.  CONSOLE REPORT
@@ -359,6 +394,11 @@ HVI_CM = StepColormap(
     colors=_hvi_colors, index=[1, 2, 3, 4, 5, 6],
     vmin=1, vmax=5, caption="NYC DOHMH Heat Vulnerability Index (1–5)",
 )
+FVI_CM = StepColormap(
+    colors=["#eff3ff", "#bdd7e7", "#6baed6", "#3182bd", "#08519c"],
+    index=[1, 2, 3, 4, 5, 6], vmin=1, vmax=5,
+    caption="NYC Present Storm-Surge Flood Vulnerability Index (1–5)",
+)
 
 # ── Print breakpoints ────────────────────────────────────────────────────
 print(f"\n  Tree Density breaks: "
@@ -412,8 +452,12 @@ heat_hvi_layer = make_layer(
     "hvi_score", HVI_CM, "Heat Vulnerability Index (2023)",
     show=False, frame=heat_gdf.to_crs("EPSG:4326"),
 )
+flood_fvi_layer = make_layer(
+    "ss_cur", FVI_CM, "Flood Vulnerability - Present Storm Surge",
+    show=False, frame=flood_gdf.to_crs("EPSG:4326"),
+)
 
-for atlas_layer in (tree_density_2015_layer, tree_density_2005_layer, tree_change_layer, heat_hvi_layer):
+for atlas_layer in (tree_density_2015_layer, tree_density_2005_layer, tree_change_layer, heat_hvi_layer, flood_fvi_layer):
     atlas_layer.add_to(m)
 
 _atlas_layer_vars = {
@@ -421,6 +465,7 @@ _atlas_layer_vars = {
     "Tree Density (2005)": tree_density_2005_layer.get_name(),
     "Tree Change 2005→2015": tree_change_layer.get_name(),
     "Heat Vulnerability Index (2023)": heat_hvi_layer.get_name(),
+    "Flood Vulnerability - Present Storm Surge": flood_fvi_layer.get_name(),
 }
 
 # ── Tree density heatmap (centroid-based) ────────────────────────
@@ -448,9 +493,10 @@ _TOOLTIP_JS = """
 (function(){
   function buildTooltipHTML(p){
     var name=window.__activeLayerName||'';
+    var displayName=p.nta_name||p.tract_name||'';
     var html='<div style="font-family:DM Sans,sans-serif;min-width:155px">'
       +'<b style="font-size:13px;color:#e8f0e8;display:block;margin-bottom:5px">'
-      +(p.nta_name||'')+'</b>';
+      +displayName+'</b>';
     if(name.indexOf('Tree Density')>=0){
       var treeYear=name.indexOf('(2005)')>=0?'2005':'2015';
       var densityField=treeYear==='2005'?'density_2005':'density_2015';
@@ -461,6 +507,10 @@ _TOOLTIP_JS = """
       var hvi=parseInt(p.hvi_score);
       html+='<div style="color:#fdbb84;font-size:11px;margin-bottom:4px">Official HVI score: '+hvi+' of 5</div>'
            +'<span style="color:#9aa59f;font-size:10px">2023 index · 2020 NTA geography</span>';
+    }else if(name.indexOf('Flood Vulnerability')>=0){
+      var fvi=p.ss_cur;
+      html+='<div style="color:#6baed6;font-size:11px;margin-bottom:4px">Present storm-surge FVI: '+(fvi==null?'Not published':fvi+' of 5')+'</div>'
+           +'<span style="color:#9aa59f;font-size:10px">Official NYC census-tract geography</span>';
     }else if(name.indexOf('Change')>=0){
       var chg=parseInt(p.tree_change)||0;
       var cc=chg>=0?'#2fa05e':'#d94f00';
@@ -568,13 +618,22 @@ _leg_heat = (
     + _lr("#7f0000", "5 · highest vulnerability")
     + "<span>Native 2020 NTA boundaries</span>"
 )
+_leg_flood = (
+    "<h4>Present Storm-Surge FVI</h4>"
+    + _lr("#eff3ff", "1 · lowest published vulnerability")
+    + _lr("#bdd7e7", "2") + _lr("#6baed6", "3")
+    + _lr("#3182bd", "4") + _lr("#08519c", "5 · highest published vulnerability")
+    + _lr("#39433d", "No published scenario score")
+    + "<span>Official NYC census tracts</span>"
+)
 _legend_js = (
     "function updateLegend(n){"
-    "['leg-density','leg-change','leg-heat']"
+    "['leg-density','leg-change','leg-heat','leg-flood']"
     ".forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='none';});"
     "var s='leg-density';"
     "if(n.indexOf('Change')>=0)s='leg-change';"
     "else if(n.indexOf('Heat Vulnerability')>=0)s='leg-heat';"
+    "else if(n.indexOf('Flood Vulnerability')>=0)s='leg-flood';"
     "var el=document.getElementById(s);if(el)el.style.display='block';}"
     "window.__legendUpdate=updateLegend;"
     "window.addEventListener('message',function(msg){"
@@ -617,6 +676,7 @@ title_html = (
     "<div id='leg-density'>" + _leg_density + "</div>"
     "<div id='leg-change' style='display:none'>" + _leg_change + "</div>"
     "<div id='leg-heat' style='display:none'>" + _leg_heat + "</div>"
+    "<div id='leg-flood' style='display:none'>" + _leg_flood + "</div>"
     "</div>"
     "<script>window.__atlasLayerVars=" + json.dumps(_atlas_layer_vars) + ";</script>"
     "<script>" + _legend_js + "</script>"

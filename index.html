@@ -450,7 +450,7 @@
   <!-- HERO ──────────────────────────────────────────────────── -->
   <section class="hero">
     <h1>NYC's neighborhood environment, <em>mapped.</em></h1>
-    <p><span class="hero-line">Explore official street-tree census and heat-vulnerability data.</span><span class="hero-line">Switch metrics, then click the map or search a neighborhood.</span></p>
+    <p><span class="hero-line">Explore official street-tree, heat, and flood-vulnerability data.</span><span class="hero-line">Switch metrics, then click the map or search an area.</span></p>
   </section>
 
   <!-- ① GEO MAP TAB ────────────────────────────────────────── -->
@@ -470,6 +470,7 @@
           <div class="metric-tabs" role="tablist" aria-label="Neighborhood metrics">
             <button class="mtab active" data-tab="trees" role="tab" aria-selected="true">TREES</button>
             <button class="mtab" data-tab="heat" role="tab" aria-selected="false">HEAT</button>
+            <button class="mtab" data-tab="flood" role="tab" aria-selected="false">FLOOD</button>
           </div>
         </div>
         <div class="panel-body" id="panel-body">
@@ -551,6 +552,19 @@
                 </div>
               </div>
               <div class="score-note">Published directly by NYC DOHMH on 2020 NTA boundaries. No project crosswalk or estimated neighborhood score is used.</div>
+            </div>
+
+            <div class="tab-panel" id="tp-flood">
+              <div class="hero-stat">
+                <div class="hero-num" id="tp-flood-score"></div>
+                <div class="hero-label">Present storm-surge Flood Vulnerability Index, out of 5</div>
+              </div>
+              <div class="sec-stats">
+                <div class="sec-box"><div class="sec-label">Harm + recovery</div><div class="sec-val neutral" id="tp-flood-fshri"></div></div>
+                <div class="sec-box"><div class="sec-label">Storm surge 2050s</div><div class="sec-val neutral" id="tp-flood-2050"></div></div>
+                <div class="sec-box"><div class="sec-label">Storm surge 2080s</div><div class="sec-val neutral" id="tp-flood-2080"></div></div>
+              </div>
+              <div class="score-note">Published by NYC MOCEJ on census-tract boundaries. “Not published” is not treated as zero vulnerability or no flood risk.</div>
             </div>
 
             <details class="analysis-details" id="analysis-details">
@@ -637,6 +651,8 @@
           <a href="https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/hvi/" target="_blank" rel="noopener">NYC DOHMH HVI 2023</a>
           <span>·</span>
           <a href="https://data.cityofnewyork.us/d/9nt8-h7nd" target="_blank" rel="noopener">NYC 2020 NTAs</a>
+          <span>·</span>
+          <a href="https://data.cityofnewyork.us/d/mrjc-v9pm" target="_blank" rel="noopener">NYC Flood Vulnerability Index</a>
         </div>
         <a class="footer-credit" href="https://github.com/j3ssc0des/Enviromental-Equity-In-NYC" target="_blank" rel="noopener" style="color:var(--green);text-decoration:none;">View on GitHub</a>
       </div>
@@ -655,10 +671,12 @@ import { buildInterpretation } from './assets/interpretation.mjs';
 /* ── SHARED STATE ──────────────────────────────────────────── */
 let ntaData      = [];
 let heatData     = [];
+let floodData    = [];
 let boroughBuilt = false;
 let currentNeighborhood = null;
 let currentTreeNeighborhood = null;
 let currentHeatNeighborhood = null;
+let currentFloodTract = null;
 let currentMetric = 'trees';
 let currentTreeWave = '2015';
 let currentMapLocation = null;
@@ -670,6 +688,7 @@ const THEMATIC_MAP_LAYERS = [
   'Tree Change 2005→2015',
   'Tree Density Heatmap',
   'Heat Vulnerability Index (2023)',
+  'Flood Vulnerability - Present Storm Surge',
 ];
 
 function isStandardNeighborhoodNTA(row) {
@@ -728,11 +747,11 @@ function representativeLocation(record) {
 }
 
 function matchingRecordForMetric(targetMetric) {
-  const expectedGeography = targetMetric === 'heat' ? 'NTA2020' : 'NTA2010';
+  const expectedGeography = targetMetric === 'heat' ? 'NTA2020' : targetMetric === 'flood' ? 'CensusTract' : 'NTA2010';
   if (currentNeighborhood && currentNeighborhood.dataset_geography === expectedGeography) return currentNeighborhood;
   const location = currentMapLocation || representativeLocation(currentNeighborhood);
   if (!location) return null;
-  const rows = targetMetric === 'heat' ? heatData : ntaData;
+  const rows = targetMetric === 'heat' ? heatData : targetMetric === 'flood' ? floodData : ntaData;
   return rows.find(row => pointInRecordGeometry(location.lng, location.lat, row.__geometry)) || null;
 }
 
@@ -744,6 +763,7 @@ function currentReferences(treeWave = currentTreeWave) {
   return {
     rows,
     heatRows: heatData,
+    floodRows: floodData,
     treeWave,
     density: totalArea > 0 ? totalTrees / totalArea : 0,
   };
@@ -857,6 +877,27 @@ function updateHeatPanel(p) {
   refreshInterpretation(p, 'heat');
 }
 
+function formatFloodScore(value) {
+  return value === null || value === undefined || value === '' ? 'Not published' : `${Number(value).toFixed(0)} / 5`;
+}
+
+function updateFloodPanel(p) {
+  currentNeighborhood = p;
+  currentFloodTract = p;
+  document.getElementById('nta-name').textContent = p.tract_name || `Census tract ${p.geoid || ''}`;
+  document.getElementById('nta-boro').textContent = `GEOID ${p.geoid || 'Not available'} · CENSUS TRACT`;
+  const badge = document.getElementById('eq-badge');
+  badge.textContent = 'OFFICIAL FVI';
+  badge.style.cssText = 'background:rgba(49,130,189,.14);border:1px solid #6baed6;color:#9ecae1';
+  document.getElementById('tp-flood-score').textContent = formatFloodScore(p.ss_cur);
+  document.getElementById('tp-flood-fshri').textContent = formatFloodScore(p.fshri);
+  document.getElementById('tp-flood-2050').textContent = formatFloodScore(p.ss_50s);
+  document.getElementById('tp-flood-2080').textContent = formatFloodScore(p.ss_80s);
+  document.getElementById('placeholder').style.display = 'none';
+  document.getElementById('nta-data').classList.add('visible');
+  refreshInterpretation(p, 'flood');
+}
+
 function openNeighborhood(p, shouldZoom) {
   if (!p) return;
   resetHighlights();
@@ -883,6 +924,16 @@ function openHeatNeighborhood(p, shouldZoom) {
   }
 }
 
+function openFloodTract(p) {
+  if (!p) return;
+  resetHighlights();
+  highlightRecord('geoid', p.geoid);
+  updateFloodPanel(p);
+  document.getElementById('nta-search').value = p.tract_name || p.geoid || '';
+  currentMapLocation = currentMapLocation || representativeLocation(p);
+  if (p.geoid && history.replaceState) history.replaceState(null, '', '#flood=' + encodeURIComponent(p.geoid));
+}
+
 function setTreeWave(wave) {
   if (wave !== '2005' && wave !== '2015') return;
   currentTreeWave = wave;
@@ -903,14 +954,14 @@ function formatReportNumber(value, suffix = '') {
 function resolveReportRecord(targetMetric) {
   const localMatch = matchingRecordForMetric(targetMetric);
   if (localMatch) return Promise.resolve(localMatch);
-  const expectedGeography = targetMetric === 'heat' ? 'NTA2020' : 'NTA2010';
+  const expectedGeography = targetMetric === 'heat' ? 'NTA2020' : targetMetric === 'flood' ? 'CensusTract' : 'NTA2010';
   if (currentNeighborhood && currentNeighborhood.dataset_geography === expectedGeography) {
     return Promise.resolve(currentNeighborhood);
   }
   const frame = document.getElementById('map-frame');
   if (!frame || !frame.contentWindow || !currentNeighborhood) return Promise.resolve(null);
-  const targetLayer = targetMetric === 'heat'
-    ? 'Heat Vulnerability Index (2023)'
+  const targetLayer = targetMetric === 'heat' ? 'Heat Vulnerability Index (2023)'
+    : targetMetric === 'flood' ? 'Flood Vulnerability - Present Storm Surge'
     : `Tree Density (${currentTreeWave})`;
   const requestId = `report-${Date.now()}-${++reportResolveSequence}`;
   return new Promise(resolve => {
@@ -938,9 +989,10 @@ async function downloadNeighborhoodReport() {
   button.disabled = true;
   button.textContent = 'Preparing report…';
   try {
-    const [treeRecord, heatRecord] = await Promise.all([
+    const [treeRecord, heatRecord, floodRecord] = await Promise.all([
       resolveReportRecord('trees'),
       resolveReportRecord('heat'),
+      resolveReportRecord('flood'),
     ]);
     const refs = currentReferences();
     const selectedWave = currentTreeWave === '2005' ? '2005–06' : '2015–16';
@@ -994,17 +1046,30 @@ async function downloadNeighborhoodReport() {
     } else {
       lines.push('No official HVI NTA record could be resolved for this selected location.');
     }
+    lines.push('', 'SECTION 3 - FLOOD VULNERABILITY (NATIVE CENSUS TRACT)');
+    if (floodRecord) {
+      lines.push(
+        `Census tract GEOID: ${floodRecord.geoid || 'Not available'}`,
+        `Present storm-surge FVI: ${formatFloodScore(floodRecord.ss_cur)}`,
+        `Flood Susceptibility to Harm and Recovery Index: ${formatFloodScore(floodRecord.fshri)}`,
+        `Storm-surge FVI, 2050s: ${formatFloodScore(floodRecord.ss_50s)}`,
+        `Storm-surge FVI, 2080s: ${formatFloodScore(floodRecord.ss_80s)}`,
+        '', 'FLOOD ANALYSIS', buildInterpretation(floodRecord, 'flood', refs).text
+      );
+    } else lines.push('No official FVI census-tract record could be resolved for this selected location.');
     lines.push(
       '',
       'SOURCES AND LIMITATIONS',
       'Trees: NYC Parks Street Tree Census 2005–06 and 2015–16 on 2010 NTAs.',
       'Heat: NYC DOHMH 2023 Heat Vulnerability Index on 2020 NTAs.',
+      'Flood: NYC MOCEJ Flood Vulnerability Index on census tracts; missing scenario scores are not zero risk.',
       'Street-tree counts exclude park trees, private trees, forest, wetlands, and total canopy.',
       'HVI is a relative area-level index and does not predict an individual health outcome.',
       'Location matching is a navigation aid, not a geographic data crosswalk.',
       'https://data.cityofnewyork.us/d/uvpi-gqnh',
       'https://data.cityofnewyork.us/d/29bw-z7pj',
       'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/hvi/'
+      ,'https://data.cityofnewyork.us/d/mrjc-v9pm'
     );
     const blob = new Blob([lines.join('\n')], { type:'text/plain;charset=utf-8' });
     const link = document.createElement('a');
@@ -1043,6 +1108,7 @@ function switchMetricTab(tabKey, preserveLocation = false) {
   const metricLayers = {
     trees:`Tree Density (${currentTreeWave})`,
     heat:'Heat Vulnerability Index (2023)',
+    flood:'Flood Vulnerability - Present Storm Surge',
   };
   const frame = document.getElementById('map-frame');
   if (frame && frame.contentWindow && metricLayers[tabKey]) {
@@ -1060,11 +1126,11 @@ function switchMetricTab(tabKey, preserveLocation = false) {
       }, '*');
     }
   }
-  document.getElementById('nta-search').placeholder = tabKey === 'heat'
-    ? `Search ${heatData.length || 197} official HVI areas`
-    : `Search ${ntaData.length || 195} NYC areas`;
+  document.getElementById('nta-search').placeholder = tabKey === 'heat' ? `Search ${heatData.length || 197} official HVI areas`
+    : tabKey === 'flood' ? 'Search official census tracts' : `Search ${ntaData.length || 195} NYC areas`;
   if (matchedRecord) {
     if (tabKey === 'heat') openHeatNeighborhood(matchedRecord, false);
+    else if (tabKey === 'flood') openFloodTract(matchedRecord);
     else openNeighborhood(matchedRecord, false);
   } else if (preserveLocation && currentNeighborhood) {
     document.getElementById('nta-data').classList.remove('visible');
@@ -1072,14 +1138,16 @@ function switchMetricTab(tabKey, preserveLocation = false) {
     document.getElementById('ph-count').textContent = 'Matching the same map location to this dataset’s native NTA geography…';
   } else if (tabKey === 'heat' && currentHeatNeighborhood) {
     updateHeatPanel(currentHeatNeighborhood);
+  } else if (tabKey === 'flood' && currentFloodTract) {
+    updateFloodPanel(currentFloodTract);
   } else if (tabKey !== 'heat' && currentTreeNeighborhood) {
     updatePanel(currentTreeNeighborhood);
     refreshInterpretation(currentTreeNeighborhood, tabKey);
   } else {
     document.getElementById('nta-data').classList.remove('visible');
     document.getElementById('placeholder').style.display = 'flex';
-    document.getElementById('ph-count').textContent = tabKey === 'heat'
-      ? 'Click a 2020 NTA to view its official 2023 HVI record.'
+    document.getElementById('ph-count').textContent = tabKey === 'heat' ? 'Click a 2020 NTA to view its official 2023 HVI record.'
+      : tabKey === 'flood' ? 'Click a census tract to view its official NYC flood-vulnerability record.'
       : `${ntaData.length} areas ready. Click the map to explore one.`;
   }
 }
@@ -1103,6 +1171,12 @@ window.addEventListener('message', function(e) {
     currentMapLocation = { lat:Number(e.data.lat), lng:Number(e.data.lng) };
   }
   const clicked = e.data.props || {};
+  if (clicked.dataset_geography === 'CensusTract') {
+    const floodProps = floodData.find(d => d.geoid === clicked.geoid) || clicked;
+    switchMetricTab('flood');
+    openFloodTract(floodProps);
+    return;
+  }
   if (clicked.dataset_geography === 'NTA2020') {
     const heatProps = heatData.find(d => d.nta_code === clicked.nta_code) || clicked;
     switchMetricTab('heat');
@@ -1119,9 +1193,12 @@ window.addEventListener('message', function(e) {
 
 /* ── MAP HELPERS ───────────────────────────────────────────── */
 function highlightNTA(ntaName) {
+  highlightRecord('nta_name', ntaName);
+}
+function highlightRecord(field, value) {
   const frame = document.getElementById('map-frame');
   if (frame && frame.contentWindow)
-    frame.contentWindow.postMessage({type:'highlight_nta', nta_name:ntaName, color:'#4DD8FF', weight:4}, '*');
+    frame.contentWindow.postMessage({type:'highlight_nta', field, value, color:'#4DD8FF', weight:4}, '*');
 }
 function resetHighlights() {
   const frame = document.getElementById('map-frame');
@@ -1133,14 +1210,15 @@ function clearNeighborhoodSelection() {
   currentNeighborhood = null;
   currentTreeNeighborhood = null;
   currentHeatNeighborhood = null;
+  currentFloodTract = null;
   currentMapLocation = null;
   const search = document.getElementById('nta-search');
   search.value = '';
   closeSearchSuggestions();
   document.getElementById('nta-data').classList.remove('visible');
   document.getElementById('placeholder').style.display = 'flex';
-  document.getElementById('ph-count').textContent = currentMetric === 'heat'
-    ? 'Click a 2020 NTA to view its official 2023 HVI record.'
+  document.getElementById('ph-count').textContent = currentMetric === 'heat' ? 'Click a 2020 NTA to view its official 2023 HVI record.'
+    : currentMetric === 'flood' ? 'Click a census tract to view its official NYC flood-vulnerability record.'
     : `${ntaData.length || 195} areas ready. Click the map to explore one.`;
   if (history.replaceState) history.replaceState(null, '', location.pathname + location.search);
 }
@@ -1332,11 +1410,11 @@ function injectIntoIframe() {
       window.addEventListener('message',function(msg){
         if(!msg.data) return;
         if(msg.data.type==='highlight_nta'){
-          var nta=msg.data.nta_name,color=msg.data.color||'#4DD8FF',weight=msg.data.weight||4;
+          var field=msg.data.field||'nta_name',value=msg.data.value||msg.data.nta_name,color=msg.data.color||'#4DD8FF',weight=msg.data.weight||4;
           Object.values(window.__layerMap||{}).forEach(function(layer){
             if(!map.hasLayer(layer)) return;
             walkFeatures(layer,function(sub){
-              if(sub.feature.properties.nta_name===nta){
+              if(String(sub.feature.properties[field])===String(value)){
                 if(!sub.__atlasBaseStyle) sub.__atlasBaseStyle={
                   color:sub.options.color,weight:sub.options.weight,opacity:sub.options.opacity,
                   fillOpacity:sub.options.fillOpacity
@@ -1445,14 +1523,15 @@ function resetDerivedViews() {
 
 function updateDataStatus() {
   const status = document.getElementById('data-status');
-  if (!ntaData.length || !heatData.length) {
-    status.innerHTML = '<span><strong>LOADING</strong> Validating official tree and heat snapshots…</span>';
+  if (!ntaData.length || !heatData.length || !floodData.length) {
+    status.innerHTML = '<span><strong>LOADING</strong> Validating official tree, heat, and flood snapshots…</span>';
     return;
   }
   status.innerHTML = `
-    <span><strong>VALIDATED</strong> ${ntaData.length} tree NTAs · ${heatData.length} HVI NTAs</span>
+    <span><strong>VALIDATED</strong> ${ntaData.length} tree NTAs · ${heatData.length} HVI NTAs · ${floodData.length} FVI tracts</span>
     <span>Trees: 2010 NTA geography</span>
     <span>HVI 2023: 2020 NTA geography</span>
+    <span>FVI: census-tract geography</span>
     <a href="docs/methodology.md">How this works</a>`;
 }
 
@@ -1476,7 +1555,7 @@ function setNeighborhoodData(rows) {
   const sample = ntaData[0] || {};
   const treeYear = Number(sample.tree_source_year) || 2015;
   document.getElementById('ph-count').textContent = `${ntaData.length} areas ready. Click the map to explore one.`;
-  document.getElementById('nav-vintage').textContent = `Trees ${treeYear} · HVI 2023`;
+  document.getElementById('nav-vintage').textContent = `Trees ${treeYear} · HVI 2023 · FVI 2024 release`;
   const hashKey = decodeURIComponent((window.location.hash.match(/^#nta=(.+)$/) || [])[1] || '').toLowerCase();
   if (hashKey) {
     const linked = ntaData.find(d => String(d.nta_code || '').toLowerCase() === hashKey || String(d.nta_name || '').toLowerCase() === hashKey);
@@ -1516,6 +1595,24 @@ function setHeatData(rows) {
       openHeatNeighborhood(linked, false);
     }
   }
+}
+
+function setFloodData(rows) {
+  const byCode = new Map();
+  rows.forEach(row => { if (row && row.geoid && !byCode.has(row.geoid)) byCode.set(row.geoid, row); });
+  const validated = Array.from(byCode.values());
+  const fields = ['fshri','ss_cur','ss_50s','ss_80s','tid_20s','tid_50s','tid_80s'];
+  const scoresValid = validated.every(row => row.dataset_geography === 'CensusTract' && row.data_mode === 'official' &&
+    fields.every(field => row[field] == null || (Number(row[field]) >= 1 && Number(row[field]) <= 5)));
+  if (validated.length !== 2209 || validated.length !== rows.length || !scoresValid) {
+    throw new Error('Official FVI snapshot did not pass client-side completeness checks');
+  }
+  floodData = validated;
+  document.documentElement.dataset.floodReady = 'true';
+  updateDataStatus();
+  const hashKey = decodeURIComponent((location.hash.match(/^#flood=(.+)$/) || [])[1] || '');
+  const linked = floodData.find(row => String(row.geoid) === hashKey);
+  if (linked) { switchMetricTab('flood'); openFloodTract(linked); }
 }
 
 async function extractNeighborhoodData() {
@@ -1567,6 +1664,22 @@ async function extractHeatData() {
   console.warn('Official HVI data unavailable', errors);
 }
 
+async function extractFloodData() {
+  const urls = [
+    'data/processed/census_tract_flood_vulnerability.geojson',
+    'https://j3ssc0des.github.io/Enviromental-Equity-In-NYC/data/processed/census_tract_flood_vulnerability.geojson',
+  ];
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, { cache:'no-cache', credentials:'omit' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const geojson = await response.json();
+      setFloodData((geojson.features || []).map(feature => ({...(feature.properties || {}), __geometry:feature.geometry})));
+      return;
+    } catch (error) { console.warn('Official FVI load failed', url, error); }
+  }
+}
+
 mapFrame.addEventListener('load', function() {
   setTimeout(injectIntoIframe, 900);
 });
@@ -1577,6 +1690,7 @@ setTimeout(injectIntoIframe, 0);
 
 extractNeighborhoodData();
 extractHeatData();
+extractFloodData();
 
 const searchInput = document.getElementById('nta-search');
 const searchOptions = document.getElementById('nta-options');
@@ -1605,20 +1719,21 @@ function updateActiveSearchOption(index) {
 function selectSearchRow(row) {
   if (!row) return;
   currentMapLocation = representativeLocation(row);
-  searchInput.value = row.nta_name || '';
+  searchInput.value = row.nta_name || row.tract_name || row.geoid || '';
   closeSearchSuggestions();
   if (currentMetric === 'heat') openHeatNeighborhood(row, false);
+  else if (currentMetric === 'flood') openFloodTract(row);
   else openNeighborhood(row, false);
 }
 
 function renderSearchSuggestions(query = searchInput.value) {
   const normalized = String(query || '').trim().toLowerCase();
-  const rows = (currentMetric === 'heat' ? heatData : ntaData).slice();
+  const rows = (currentMetric === 'heat' ? heatData : currentMetric === 'flood' ? floodData : ntaData).slice();
   visibleSearchRows = rows
-    .filter(row => !normalized || String(row.nta_name || '').toLowerCase().includes(normalized))
+    .filter(row => !normalized || `${row.nta_name || row.tract_name || ''} ${row.geoid || ''}`.toLowerCase().includes(normalized))
     .sort((a, b) => {
-      const aName = String(a.nta_name || '').toLowerCase();
-      const bName = String(b.nta_name || '').toLowerCase();
+      const aName = String(a.nta_name || a.tract_name || a.geoid || '').toLowerCase();
+      const bName = String(b.nta_name || b.tract_name || b.geoid || '').toLowerCase();
       const aStarts = normalized && aName.startsWith(normalized) ? 0 : 1;
       const bStarts = normalized && bName.startsWith(normalized) ? 0 : 1;
       return aStarts - bStarts || aName.localeCompare(bName);
@@ -1630,7 +1745,7 @@ function renderSearchSuggestions(query = searchInput.value) {
     option.className = 'nta-option';
     option.id = `nta-option-${index}`;
     option.setAttribute('role', 'option');
-    option.innerHTML = `${esc(row.nta_name)}<small>${esc(row.boro_name || row.borough || '')} · ${esc(row.nta_code || '')}</small>`;
+    option.innerHTML = `${esc(row.nta_name || row.tract_name || row.geoid)}<small>${esc(row.boro_name || row.borough || 'NYC')} · ${esc(row.nta_code || row.geoid || '')}</small>`;
     option.addEventListener('pointerdown', event => {
       event.preventDefault();
       selectSearchRow(row);
@@ -1660,7 +1775,7 @@ searchInput.addEventListener('keydown', function(event) {
     updateActiveSearchOption(activeSearchIndex + (event.key === 'ArrowDown' ? 1 : -1));
   } else if (event.key === 'Enter') {
     event.preventDefault();
-    const exact = visibleSearchRows.find(row => String(row.nta_name || '').toLowerCase() === this.value.trim().toLowerCase());
+    const exact = visibleSearchRows.find(row => String(row.nta_name || row.tract_name || row.geoid || '').toLowerCase() === this.value.trim().toLowerCase());
     selectSearchRow(exact || visibleSearchRows[Math.max(activeSearchIndex, 0)]);
   } else if (event.key === 'Escape') {
     closeSearchSuggestions();

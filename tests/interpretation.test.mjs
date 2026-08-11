@@ -5,12 +5,15 @@ import { buildInterpretation } from '../assets/interpretation.mjs';
 
 const snapshot = JSON.parse(await readFile(new URL('../data/processed/nta_environmental_snapshot.geojson', import.meta.url), 'utf8'));
 const heatSnapshot = JSON.parse(await readFile(new URL('../data/processed/nta2020_heat_vulnerability.geojson', import.meta.url), 'utf8'));
+const floodSnapshot = JSON.parse(await readFile(new URL('../data/processed/census_tract_flood_vulnerability.geojson', import.meta.url), 'utf8'));
 const rows = snapshot.features.map(feature => feature.properties);
 const heatRows = heatSnapshot.features.map(feature => feature.properties);
+const floodRows = floodSnapshot.features.map(feature => feature.properties);
 const standardRows = rows.filter(row => !/(98|99)$/.test(String(row.nta_code || '')));
 const references = {
   rows: standardRows,
   heatRows,
+  floodRows,
   treeWave: '2015',
   density: standardRows.reduce((sum, row) => sum + row.trees_2015, 0)
     / standardRows.reduce((sum, row) => sum + row.area_km2, 0),
@@ -60,6 +63,22 @@ test('special-purpose NTAs remain visible but are excluded from neighborhood ran
   assert.match(result.text, /special-purpose 2010 NTA/);
   assert.match(result.text, /excluded from neighborhood rankings/);
   assert.doesNotMatch(result.text, /higher than about/);
+});
+
+test('official FVI records preserve missing scenarios without calling them zero risk', () => {
+  assert.equal(floodRows.length, 2209);
+  assert.equal(new Set(floodRows.map(row => row.geoid)).size, 2209);
+  const missing = floodRows.find(row => row.ss_cur === null);
+  const covered = floodRows.find(row => Number.isInteger(row.ss_cur));
+  assert.ok(missing && covered);
+  assert.match(buildInterpretation(missing, 'flood', references).text, /missing scenario coverage, not a score of zero/);
+  assert.match(buildInterpretation(covered, 'flood', references).text, /official present storm-surge Flood Vulnerability Index/);
+  for (const row of floodRows) {
+    assert.equal(row.dataset_geography, 'CensusTract');
+    for (const field of ['fshri','ss_cur','ss_50s','ss_80s','tid_20s','tid_50s','tid_80s']) {
+      assert.ok(row[field] === null || (Number.isInteger(row[field]) && row[field] >= 1 && row[field] <= 5));
+    }
+  }
 });
 
 test('every published neighborhood and metric produces safe, bounded prose', () => {

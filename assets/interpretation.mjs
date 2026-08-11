@@ -13,6 +13,11 @@ const HVI_SOURCE = {
   url: 'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/hvi/',
 };
 
+const FVI_SOURCE = {
+  label: 'NYC Flood Vulnerability Index',
+  url: 'https://data.cityofnewyork.us/d/mrjc-v9pm',
+};
+
 function finite(value) {
   if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
@@ -114,7 +119,28 @@ function heatInterpretation(p, references) {
   };
 }
 
+function floodInterpretation(p, references) {
+  const name = p.tract_name || `Census tract ${p.geoid || ''}`;
+  const present = finite(p.ss_cur);
+  const fshri = finite(p.fshri);
+  const rows = Array.isArray(references.floodRows) ? references.floodRows : [];
+  if (present === null) {
+    return {
+      text: `${name} has no published present storm-surge FVI score in NYC’s dataset. That is missing scenario coverage, not a score of zero and not evidence that the tract has no flood risk. Its published Flood Susceptibility to Harm and Recovery Index is ${formatNumber(fshri)} out of 5.`,
+      sources: [FVI_SOURCE],
+    };
+  }
+  const covered = rows.filter(row => finite(row.ss_cur) !== null);
+  const sameScore = covered.filter(row => finite(row.ss_cur) === present).length;
+  return {
+    text: `${name} has an official present storm-surge Flood Vulnerability Index score of ${formatNumber(present)} out of 5; ${sameScore} of ${covered.length} tracts with a published present-scenario score share that rank. Its Flood Susceptibility to Harm and Recovery Index is ${formatNumber(fshri)} out of 5. These are relative tract-level indices, not a property-level flood forecast, insurance determination, or guarantee of safety.`,
+    sources: [FVI_SOURCE],
+  };
+}
+
 export function buildInterpretation(properties, metric, references = {}) {
   const p = properties || {};
-  return metric === 'heat' ? heatInterpretation(p, references) : treeInterpretation(p, references);
+  if (metric === 'heat') return heatInterpretation(p, references);
+  if (metric === 'flood') return floodInterpretation(p, references);
+  return treeInterpretation(p, references);
 }
