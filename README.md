@@ -2,28 +2,26 @@
 
 [View the deployed site](https://j3ssc0des.github.io/Enviromental-Equity-In-NYC)
 
-An expanding, source-transparent atlas of New York City environmental conditions. The first module compares the 2005–06 and 2015–16 NYC Street Tree Censuses with 2020–2024 ACS five-year income context at 2010 Neighborhood Tabulation Area geography. Source years are displayed separately and the ACS release is refreshed by the build pipeline.
+An expanding, source-transparent atlas of New York City environmental conditions. It currently presents the 2005–06 and 2015–16 NYC Street Tree Censuses on 2010 Neighborhood Tabulation Areas and NYC DOHMH's official 2023 Heat Vulnerability Index on its native 2020 NTA geography.
 
 ## Current module
 
 - Street-tree counts and density
 - Historical tree-count change
-- ACS household-income context with coverage metadata
-- A clearly labeled project screening score
+- Official 2023 Heat Vulnerability Index scores and published component values
+- Separate, explicitly labeled 2010 and 2020 NTA geographies
 - A compact map-first interface with expandable neighborhood details
 - A persistent interpretation sidebar with source-bound neighborhood narratives
 - A deterministic explanation engine that runs entirely in the browser with no API key or usage fees
-- A validated GeoJSON snapshot used by the map, rankings, findings, and localhost preview
+- Validated GeoJSON products used by the map, findings, downloads, and localhost preview
 
-Street trees are not total canopy, and the screening score is not measured environmental risk. Read [methodology](docs/methodology.md) before interpreting results.
-
-Airports, parks, cemeteries, islands, correctional facilities, and other areas with fewer than 100 ACS households remain visible for geographic context but are excluded from residential screening comparisons and priority markers.
+Street trees are not total canopy, and an HVI score of 1 does not mean no heat risk. Read [methodology](docs/methodology.md) before interpreting results.
 
 ## Roadmap
 
 The [data catalog](docs/data-catalog.md) tracks official heat, flooding, canopy, air, pollution, water, health, and community-vulnerability sources. A dataset is promoted only after its native geography, uncertainty, transformation, missingness behavior, and update cadence are documented and tested.
 
-The interpretation sidebar uses transparent rules to compare each eligible neighborhood with the same validated reference values shown elsewhere in the interface. It describes direction and context, links directly to the relevant public sources, and states the limitations of each metric. It runs locally in the visitor's browser, so the deployed site needs no API key, serverless function, paid AI service, or credit card.
+The optional interpretation disclosure uses transparent rules, links directly to public sources, and states each metric's limitations. It runs locally in the visitor's browser, so the deployed site needs no API key, serverless function, paid AI service, or credit card.
 
 ## Reliability
 
@@ -32,7 +30,7 @@ The interpretation sidebar uses transparent rules to compare each eligible neigh
 - Pull requests build from official sources and validate output without deploying.
 - `main` deploys to GitHub Pages only after rebuilding and validating.
 - A weekly scheduled build detects upstream changes.
-- Demo fallback is forbidden in CI and deployment.
+- Builds fail closed when an official source is unavailable; there is no demo fallback.
 
 ## Local build
 
@@ -47,11 +45,12 @@ npm test
 python3 -m http.server 8000
 ```
 
-Then open `http://127.0.0.1:8000/`. Rankings read the validated GeoJSON directly and fail closed if it is unavailable, so the UI cannot silently fall back to old embedded defaults.
+Then open `http://127.0.0.1:8000/`. The interface reads validated GeoJSON directly and fails closed if it is unavailable, so it cannot silently fall back to old embedded defaults.
 
 ## Primary sources
 
 - [NYC Street Tree Census 2015](https://data.cityofnewyork.us/d/uvpi-gqnh)
 - [NYC Street Tree Census 2005](https://data.cityofnewyork.us/d/29bw-z7pj)
 - [2010 tract-to-NTA crosswalk](https://data.cityofnewyork.us/d/8ius-dhrr)
-- [2020–2024 ACS five-year API](https://api.census.gov/data/2024/acs/acs5.html)
+- [NYC DOHMH Heat Vulnerability Index 2023](https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/hvi/)
+- [NYC Planning 2020 Neighborhood Tabulation Areas](https://data.cityofnewyork.us/d/9nt8-h7nd)

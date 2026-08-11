@@ -32,13 +32,11 @@ jobs:
       - name: Audit upstream schemas
         run: python .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
       - name: Build with official data only
-        env:
-          ALLOW_DEMO_DATA: "false"
         run: python nyc_trees_analysis.py
       - name: Validate generated data and UI claims
         run: python scripts/validate_build.py
       - name: Check generated files
-        run: test -s nyc_trees_map.html && test -s data/processed/nta_environmental_snapshot.geojson
+        run: test -s nyc_trees_map.html && test -s data/processed/nta_environmental_snapshot.geojson && test -s data/processed/nta2020_heat_vulnerability.geojson
       - uses: actions/upload-artifact@v4
         with:
           name: validated-site-${{ github.sha }}
