@@ -7,9 +7,10 @@ const snapshot = JSON.parse(await readFile(new URL('../data/processed/nta_enviro
 const heatSnapshot = JSON.parse(await readFile(new URL('../data/processed/nta2020_heat_vulnerability.geojson', import.meta.url), 'utf8'));
 const rows = snapshot.features.map(feature => feature.properties);
 const heatRows = heatSnapshot.features.map(feature => feature.properties);
+const standardRows = rows.filter(row => !/(98|99)$/.test(String(row.nta_code || '')));
 const references = {
-  density: rows.reduce((sum, row) => sum + row.trees_2015, 0)
-    / rows.reduce((sum, row) => sum + row.area_km2, 0),
+  density: standardRows.reduce((sum, row) => sum + row.trees_2015, 0)
+    / standardRows.reduce((sum, row) => sum + row.area_km2, 0),
 };
 
 test('tree interpretation compares conditions, describes history, and states scope', () => {

@@ -18,3 +18,9 @@ Last reviewed: 2026-08-11. “Available” means the dataset is integrated, vali
 Each integrated dataset needs a source URL, dataset identifier, reference period, retrieval timestamp, unit, native geography, transformation method, missingness rate, and update cadence.
 
 The deployed products contain no project-created crosswalk estimate or combined screening score. Tree density and change are exact arithmetic from published census counts and official land area; HVI values are published directly by NYC DOHMH.
+
+## Future income and multi-factor screening module
+
+Income context remains planned, but it will be published only after the project documents an official source, reference period, native geography, uncertainty, missingness, and any required geographic transformation. A tract-derived value must never be labeled as an official NTA median.
+
+A future multi-factor screening view must keep every official input visible and independently selectable. Any normalization, direction, weight, aggregation, missing-data rule, and sensitivity test must be documented and reproducible. Its result must be labeled as a project-created screening method—not an official NYC score, risk assessment, eligibility decision, or causal finding.
