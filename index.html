@@ -1566,8 +1566,8 @@ function selectSearchRow(row) {
   currentMapLocation = representativeLocation(row);
   searchInput.value = row.nta_name || '';
   closeSearchSuggestions();
-  if (currentMetric === 'heat') openHeatNeighborhood(row, true);
-  else openNeighborhood(row, true);
+  if (currentMetric === 'heat') openHeatNeighborhood(row, false);
+  else openNeighborhood(row, false);
 }
 
 function renderSearchSuggestions(query = searchInput.value) {

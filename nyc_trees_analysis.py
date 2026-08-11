@@ -499,7 +499,8 @@ _TOOLTIP_JS = """
           });
           sub.on('click', function(e){
             window.parent.postMessage(
-              {type:'nta_click', props:e.target.feature.properties}, '*');
+              {type:'nta_click', props:e.target.feature.properties,
+               lat:e.latlng&&e.latlng.lat, lng:e.latlng&&e.latlng.lng}, '*');
           });
         }
       }

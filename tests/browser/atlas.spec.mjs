@@ -78,12 +78,37 @@ test('map feature clicks open an official neighborhood record', async ({ page },
   await expect(page.locator('#nta-data')).toHaveClass(/visible/);
   await expect(page.locator('#nta-name')).not.toHaveText('');
   await expect(page).toHaveURL(/#nta=/);
+  const clickedTreeName = await page.locator('#nta-name').textContent();
+  await page.locator('.mtab[data-tab="heat"]').click();
+  await expect(page).toHaveURL(/#heat=/);
+  await page.locator('.mtab[data-tab="trees"]').click();
+  await expect(page).toHaveURL(/#nta=/);
+  await expect(page.locator('#nta-name')).toHaveText(clickedTreeName || '');
+});
+
+test('repeated searches and metric switches do not reuse a stale location', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.startsWith('mobile'), 'covered by desktop interaction test');
+  await waitForAtlas(page);
+  for (const treeName of ['Upper East Side-Carnegie Hill', 'Flushing', 'North Riverdale-Fieldston-Riverdale']) {
+    await selectTreeNeighborhood(page, treeName);
+    await page.locator('.mtab[data-tab="heat"]').click();
+    await expect(page).toHaveURL(/#heat=/);
+    await expect(page.locator('#tp-heat-score')).not.toHaveText('—');
+    await page.locator('.mtab[data-tab="trees"]').click();
+    await expect(page).toHaveURL(/#nta=/);
+    await expect(page.locator('#nta-name')).toHaveText(treeName);
+  }
 });
 
 test('predictive neighborhood search replaces the current value without manual clearing', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.startsWith('mobile'), 'covered by desktop interaction test');
   await waitForAtlas(page);
   await selectTreeNeighborhood(page);
+  const viewBeforeSearch = await page.locator('#map-frame').evaluate(frame => {
+    const map = Object.values(frame.contentWindow).find(value => value && typeof value === 'object' && value.getZoom && value.getCenter);
+    const center = map.getCenter();
+    return { zoom:map.getZoom(), lat:center.lat, lng:center.lng };
+  });
   const search = page.locator('#nta-search');
   await search.click();
   await page.keyboard.type('Upper East');
@@ -93,6 +118,12 @@ test('predictive neighborhood search replaces the current value without manual c
   await suggestions.first().click();
   await expect(page.locator('#nta-name')).toHaveText('Upper East Side-Carnegie Hill');
   await expect(search).toHaveValue('Upper East Side-Carnegie Hill');
+  const viewAfterSearch = await page.locator('#map-frame').evaluate(frame => {
+    const map = Object.values(frame.contentWindow).find(value => value && typeof value === 'object' && value.getZoom && value.getCenter);
+    const center = map.getCenter();
+    return { zoom:map.getZoom(), lat:center.lat, lng:center.lng };
+  });
+  expect(viewAfterSearch).toEqual(viewBeforeSearch);
 });
 
 test('combined report contains separate tree and heat records', async ({ page }, testInfo) => {
