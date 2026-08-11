@@ -23,6 +23,8 @@ build/
 *.tmp
 *.log
 .cache/
+test-results/
+playwright-report/
 data/raw/*.json
 data/metadata/source-audit.json
 
@@ -37,7 +39,6 @@ venv/
 .venv/
 __pycache__/
 *.pyc
-
 
 
 

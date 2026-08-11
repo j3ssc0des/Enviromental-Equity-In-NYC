@@ -23,6 +23,14 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install browser-test dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
       - name: Install pinned application dependencies
         run: pip install -r requirements.txt
       - name: Compile Python
@@ -35,6 +43,8 @@ jobs:
         run: python nyc_trees_analysis.py
       - name: Validate generated data and UI claims
         run: python scripts/validate_build.py
+      - name: Test browser interactions
+        run: npm run test:e2e
       - name: Check generated files
         run: test -s nyc_trees_map.html && test -s data/processed/nta_environmental_snapshot.geojson && test -s data/processed/nta2020_heat_vulnerability.geojson
       - uses: actions/upload-artifact@v4

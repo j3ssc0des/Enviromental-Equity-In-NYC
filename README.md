@@ -12,6 +12,8 @@ An expanding, source-transparent atlas of New York City environmental conditions
 - Separate, explicitly labeled 2010 and 2020 NTA geographies
 - A compact map-first interface with expandable neighborhood details
 - A persistent interpretation sidebar with source-bound neighborhood narratives
+- A predictive, keyboard-accessible neighborhood search that preserves location across metrics
+- Combined location reports with separate 2010 tree and 2020 heat records
 - A deterministic explanation engine that runs entirely in the browser with no API key or usage fees
 - Validated GeoJSON products used by the map, findings, downloads, and localhost preview
 
@@ -31,6 +33,7 @@ The optional interpretation disclosure uses transparent rules, links directly to
 - `main` deploys to GitHub Pages only after rebuilding and validating.
 - A weekly scheduled build detects upstream changes.
 - Builds fail closed when an official source is unavailable; there is no demo fallback.
+- Playwright exercises metric switching, legends, map clicks, search replacement, report downloads, and mobile layout in Chromium.
 
 ## Local build
 
@@ -42,6 +45,7 @@ python .skillshare/skills/audit-nyc-environment-data/scripts/audit_sources.py
 python nyc_trees_analysis.py
 python scripts/validate_build.py
 npm test
+npm run test:e2e
 python3 -m http.server 8000
 ```
 

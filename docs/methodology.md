@@ -8,6 +8,8 @@ Tree mode uses 2010 Neighborhood Tabulation Areas (NTAs), matching the codes car
 
 When a visitor switches between tree and heat modes, the interface preserves the selected map location and opens the polygon from the other dataset that contains that point. This is a navigation aid, not a data crosswalk: the panel and report continue to identify each record by its own NTA name, code, vintage, and source year.
 
+The downloadable combined location report applies the same point-in-polygon navigation rule. It presents the resulting 2010 tree NTA and 2020 heat NTA as separate records with separate analyses and source notes; it does not merge, average, or transfer values between the boundary systems.
+
 ## Street trees
 
 Tree counts come from the NYC Parks 2005–06 and 2015–16 Street Tree Censuses. The interface lets you switch the active census wave while retaining the same NTA geography. Density is count divided by land area, not total polygon area. Street-tree counts do not represent park trees, private trees, forest, wetlands, or total canopy.
