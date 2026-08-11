@@ -171,6 +171,21 @@
     }
     .nta-search::placeholder { color: #48604e; }
     .nta-search:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(47,160,94,.1); }
+    .search-wrap { position: relative; z-index: 1200; }
+    .nta-suggestions {
+      display: none; position: absolute; top: 36px; left: 0; right: 0;
+      max-height: 240px; overflow-y: auto; background: #090d11;
+      border: 1px solid var(--green); border-radius: 6px;
+      box-shadow: 0 12px 28px rgba(0,0,0,.5); padding: 4px; z-index: 1201;
+    }
+    .nta-suggestions.open { display: block; }
+    .nta-option {
+      display: block; width: 100%; border: 0; border-radius: 4px; padding: 8px 9px;
+      background: transparent; color: var(--text); text-align: left; cursor: pointer;
+      font: 0.7rem var(--sans);
+    }
+    .nta-option:hover, .nta-option.active { background: var(--green-lo); color: #fff; }
+    .nta-option small { display: block; margin-top: 2px; color: var(--muted); font: 0.52rem var(--mono); }
     .metric-tabs { display: flex; gap: 3px; }
     .mtab {
       font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em;
@@ -448,8 +463,10 @@
       <div class="panel-col">
         <div class="panel-header">
           <div class="panel-eyebrow">Neighborhood inspector</div>
-          <input class="nta-search" id="nta-search" list="nta-options" type="search" autocomplete="off" placeholder="Search 195 NYC areas" aria-label="Search neighborhoods" />
-          <datalist id="nta-options"></datalist>
+          <div class="search-wrap">
+            <input class="nta-search" id="nta-search" type="search" autocomplete="off" placeholder="Search 195 NYC areas" aria-label="Search neighborhoods" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="nta-options" />
+            <div class="nta-suggestions" id="nta-options" role="listbox" aria-label="Neighborhood suggestions"></div>
+          </div>
           <div class="metric-tabs" role="tablist" aria-label="Neighborhood metrics">
             <button class="mtab active" data-tab="trees" role="tab" aria-selected="true">TREES</button>
             <button class="mtab" data-tab="heat" role="tab" aria-selected="false">HEAT</button>
@@ -645,6 +662,8 @@ let currentHeatNeighborhood = null;
 let currentMetric = 'trees';
 let currentTreeWave = '2015';
 let currentMapLocation = null;
+let reportResolveSequence = 0;
+const reportResolveRequests = new Map();
 const THEMATIC_MAP_LAYERS = [
   'Tree Density (2015)',
   'Tree Density (2005)',
@@ -657,6 +676,64 @@ function isStandardNeighborhoodNTA(row) {
   // NYC's 2010 NTA codes ending in 98 or 99 represent special-purpose areas
   // such as airports, Rikers Island, parks, and cemeteries.
   return !/(98|99)$/.test(String(row && row.nta_code || ''));
+}
+
+function pointInRing(lng, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+
+function pointInRecordGeometry(lng, lat, geometry) {
+  if (!geometry || !geometry.coordinates) return false;
+  if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') return false;
+  const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+  return polygons.some(rings => rings.length && pointInRing(lng, lat, rings[0]) &&
+    !rings.slice(1).some(hole => pointInRing(lng, lat, hole)));
+}
+
+function representativeLocation(record) {
+  const directLat = Number(record && record.lat);
+  const directLng = Number(record && record.lon);
+  if (Number.isFinite(directLat) && Number.isFinite(directLng)) return { lat:directLat, lng:directLng };
+  const geometry = record && record.__geometry;
+  if (!geometry || !geometry.coordinates) return null;
+  const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+  for (const rings of polygons) {
+    const ring = rings && rings[0];
+    if (!ring || !ring.length) continue;
+    const lngs = ring.map(point => Number(point[0]));
+    const lats = ring.map(point => Number(point[1]));
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const centerLng = (minLng + maxLng) / 2;
+    const centerLat = (minLat + maxLat) / 2;
+    const candidates = [];
+    for (let row = 0; row <= 20; row++) {
+      for (let col = 0; col <= 20; col++) {
+        const lng = minLng + (maxLng - minLng) * (col + 0.5) / 21;
+        const lat = minLat + (maxLat - minLat) * (row + 0.5) / 21;
+        candidates.push({ lat, lng, distance:(lng - centerLng) ** 2 + (lat - centerLat) ** 2 });
+      }
+    }
+    candidates.sort((a, b) => a.distance - b.distance);
+    const interior = candidates.find(point => pointInRecordGeometry(point.lng, point.lat, geometry));
+    if (interior) return { lat:interior.lat, lng:interior.lng };
+  }
+  return null;
+}
+
+function matchingRecordForMetric(targetMetric) {
+  const expectedGeography = targetMetric === 'heat' ? 'NTA2020' : 'NTA2010';
+  if (currentNeighborhood && currentNeighborhood.dataset_geography === expectedGeography) return currentNeighborhood;
+  const location = currentMapLocation || representativeLocation(currentNeighborhood);
+  if (!location) return null;
+  const rows = targetMetric === 'heat' ? heatData : ntaData;
+  return rows.find(row => pointInRecordGeometry(location.lng, location.lat, row.__geometry)) || null;
 }
 
 function currentReferences(treeWave = currentTreeWave) {
@@ -823,82 +900,134 @@ function formatReportNumber(value, suffix = '') {
   return Number.isFinite(number) ? `${number.toLocaleString()}${suffix}` : 'Not available';
 }
 
-function downloadNeighborhoodReport() {
+function resolveReportRecord(targetMetric) {
+  const localMatch = matchingRecordForMetric(targetMetric);
+  if (localMatch) return Promise.resolve(localMatch);
+  const expectedGeography = targetMetric === 'heat' ? 'NTA2020' : 'NTA2010';
+  if (currentNeighborhood && currentNeighborhood.dataset_geography === expectedGeography) {
+    return Promise.resolve(currentNeighborhood);
+  }
+  const frame = document.getElementById('map-frame');
+  if (!frame || !frame.contentWindow || !currentNeighborhood) return Promise.resolve(null);
+  const targetLayer = targetMetric === 'heat'
+    ? 'Heat Vulnerability Index (2023)'
+    : `Tree Density (${currentTreeWave})`;
+  const requestId = `report-${Date.now()}-${++reportResolveSequence}`;
+  return new Promise(resolve => {
+    const timer = setTimeout(() => {
+      reportResolveRequests.delete(requestId);
+      resolve(null);
+    }, 3000);
+    reportResolveRequests.set(requestId, { resolve, timer });
+    frame.contentWindow.postMessage({
+      type:'resolve_at_location',
+      requestId,
+      targetLayer,
+      sourceNtaName:currentNeighborhood.nta_name,
+      sourceGeography:currentNeighborhood.dataset_geography,
+      lat:currentMapLocation && currentMapLocation.lat,
+      lng:currentMapLocation && currentMapLocation.lng,
+    }, '*');
+  });
+}
+
+async function downloadNeighborhoodReport() {
   if (!currentNeighborhood) return;
-  const p = currentNeighborhood;
-  if (p.dataset_geography === 'NTA2020') {
-    const heatLines = [
-      'NYC ENVIRONMENTAL ATLAS - OFFICIAL HEAT VULNERABILITY RECORD',
+  const button = document.getElementById('download-report');
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Preparing report…';
+  try {
+    const [treeRecord, heatRecord] = await Promise.all([
+      resolveReportRecord('trees'),
+      resolveReportRecord('heat'),
+    ]);
+    const refs = currentReferences();
+    const selectedWave = currentTreeWave === '2005' ? '2005–06' : '2015–16';
+    const treeField = currentTreeWave === '2005' ? 'trees_2005' : 'trees_2015';
+    const densityField = currentTreeWave === '2005' ? 'density_2005' : 'density_2015';
+    const lines = [
+      'NYC ENVIRONMENTAL ATLAS - COMBINED LOCATION REPORT',
       `Generated: ${new Date().toISOString().slice(0, 10)}`,
       '',
-      `Neighborhood: ${p.nta_name}`,
-      `Borough: ${p.boro_name}`,
-      `2020 NTA code: ${p.nta_code}`,
+      'LOCATION MATCHING',
+      'Tree and heat records are matched by the selected map location.',
+      'They use different official NTA boundary vintages and are not treated as the same neighborhood record.',
       '',
-      `Official 2023 HVI score: ${p.hvi_score} of 5`,
-      `Published surface temperature: ${Number(p.surface_temp_f).toFixed(1)}°F`,
-      `Published green space: ${Number(p.greenspace_pct).toFixed(1)}%`,
-      `Published households with AC: ${Number(p.households_ac_pct).toFixed(1)}%`,
-      '',
-      'SOURCE AND INTERPRETATION',
-      'NYC Department of Health and Mental Hygiene, 2023 Heat Vulnerability Index.',
-      'Geography: native 2020 Neighborhood Tabulation Area. No project crosswalk was applied.',
-      'Scores range from 1 (lowest relative vulnerability) to 5 (highest); a lower score does not mean no heat risk.',
-      'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/hvi/'
+      'SECTION 1 - STREET TREES (NATIVE 2010 NTA)',
     ];
-    const heatBlob = new Blob([heatLines.join('\n')], { type: 'text/plain;charset=utf-8' });
-    const heatLink = document.createElement('a');
-    heatLink.href = URL.createObjectURL(heatBlob);
-    heatLink.download = `${String(p.nta_code).toLowerCase()}-official-hvi-report.txt`;
-    document.body.appendChild(heatLink);
-    heatLink.click();
-    const heatObjectUrl = heatLink.href;
-    heatLink.remove();
-    setTimeout(() => URL.revokeObjectURL(heatObjectUrl), 1000);
-    return;
+    if (treeRecord) {
+      lines.push(
+        `Neighborhood: ${treeRecord.nta_name || 'Not available'}`,
+        `Borough: ${treeRecord.boro_name || treeRecord.borough || 'Not available'}`,
+        `2010 NTA code: ${treeRecord.nta_code || 'Not available'}`,
+        `Selected census wave: ${selectedWave}`,
+        `Street trees (${selectedWave}): ${formatReportNumber(treeRecord[treeField])}`,
+        `Tree density (${selectedWave}): ${formatReportNumber(treeRecord[densityField], ' trees/km²')}`,
+        `Street trees (${currentTreeWave === '2005' ? '2015–16' : '2005–06'}): ${formatReportNumber(currentTreeWave === '2005' ? treeRecord.trees_2015 : treeRecord.trees_2005)}`,
+        `Change, 2005–06 to 2015–16: ${formatReportNumber(treeRecord.tree_change)} trees (${formatReportNumber(treeRecord.pct_change, '%')})`,
+        `2005 mapping coverage: ${formatReportNumber(treeRecord.tree_2005_mapping_coverage_pct, '%')}`,
+        '',
+        'TREE ANALYSIS',
+        buildInterpretation(treeRecord, 'trees', refs).text
+      );
+    } else {
+      lines.push('No official tree NTA record could be resolved for this selected location.');
+    }
+    lines.push(
+      '',
+      'SECTION 2 - HEAT VULNERABILITY (NATIVE 2020 NTA)'
+    );
+    if (heatRecord) {
+      lines.push(
+        `Neighborhood: ${heatRecord.nta_name || 'Not available'}`,
+        `Borough: ${heatRecord.boro_name || heatRecord.borough || 'Not available'}`,
+        `2020 NTA code: ${heatRecord.nta_code || 'Not available'}`,
+        `Official 2023 HVI score: ${formatReportNumber(heatRecord.hvi_score)} of 5`,
+        `Published surface temperature: ${formatReportNumber(heatRecord.surface_temp_f, '°F')}`,
+        `Published green space: ${formatReportNumber(heatRecord.greenspace_pct, '%')}`,
+        `Published households with AC: ${formatReportNumber(heatRecord.households_ac_pct, '%')}`,
+        '',
+        'HEAT ANALYSIS',
+        buildInterpretation(heatRecord, 'heat', refs).text
+      );
+    } else {
+      lines.push('No official HVI NTA record could be resolved for this selected location.');
+    }
+    lines.push(
+      '',
+      'SOURCES AND LIMITATIONS',
+      'Trees: NYC Parks Street Tree Census 2005–06 and 2015–16 on 2010 NTAs.',
+      'Heat: NYC DOHMH 2023 Heat Vulnerability Index on 2020 NTAs.',
+      'Street-tree counts exclude park trees, private trees, forest, wetlands, and total canopy.',
+      'HVI is a relative area-level index and does not predict an individual health outcome.',
+      'Location matching is a navigation aid, not a geographic data crosswalk.',
+      'https://data.cityofnewyork.us/d/uvpi-gqnh',
+      'https://data.cityofnewyork.us/d/29bw-z7pj',
+      'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/hvi/'
+    );
+    const blob = new Blob([lines.join('\n')], { type:'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    const baseName = String(currentNeighborhood.nta_name || currentNeighborhood.nta_code || 'location')
+      .replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+    link.download = `${baseName}-combined-environmental-report.txt`;
+    document.body.appendChild(link);
+    link.click();
+    const objectUrl = link.href;
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalLabel;
   }
-  const refs = currentReferences();
-  const selectedWave = currentTreeWave === '2005' ? '2005–06' : '2015–16';
-  const selectedTrees = currentTreeWave === '2005' ? p.trees_2005 : p.trees_2015;
-  const selectedDensity = currentTreeWave === '2005' ? p.density_2005 : p.density_2015;
-  const reportLines = [
-    'NYC ENVIRONMENTAL ATLAS - NEIGHBORHOOD REPORT',
-    `Generated: ${new Date().toISOString().slice(0, 10)}`,
-    '',
-    `Neighborhood: ${p.nta_name || 'Not available'}`,
-    `Borough: ${p.boro_name || p.borough || 'Not available'}`,
-    `NTA code: ${p.nta_code || 'Not available'}`,
-    'Geography: native 2010 Neighborhood Tabulation Area',
-    '',
-    'STREET TREES',
-    `Selected census wave: ${selectedWave}`,
-    `Street trees (${selectedWave}): ${formatReportNumber(selectedTrees)}`,
-    `Tree density (${selectedWave}): ${formatReportNumber(selectedDensity, ' trees/km²')}`,
-    `Street trees (other wave): ${formatReportNumber(currentTreeWave === '2005' ? p.trees_2015 : p.trees_2005)}`,
-    `Change, 2005–06 to 2015–16: ${formatReportNumber(p.tree_change)} trees (${formatReportNumber(p.pct_change, '%')})`,
-    `2005 mapping coverage: ${formatReportNumber(p.tree_2005_mapping_coverage_pct, '%')}`,
-    '',
-    'INTERPRETATION',
-    buildInterpretation(p, currentMetric, refs).text,
-    '',
-    'SOURCES AND LIMITATIONS',
-    'NYC Street Tree Census 2005–06 and 2015–16.',
-    'Street-tree counts exclude park trees, private trees, forest, wetlands, and total canopy.',
-    'Use this snapshot for exploration and prioritization, then verify local conditions and community evidence.'
-  ];
-  const blob = new Blob([reportLines.join('\n')], { type: 'text/plain;charset=utf-8' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${String(p.nta_code || p.nta_name || 'neighborhood').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()}-environmental-report.txt`;
-  document.body.appendChild(link);
-  link.click();
-  const objectUrl = link.href;
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
 /* ── METRIC TAB SWITCH (inside right panel) ────────────────── */
 function switchMetricTab(tabKey, preserveLocation = false) {
+  const matchedRecord = preserveLocation && currentNeighborhood
+    ? matchingRecordForMetric(tabKey)
+    : null;
   currentMetric = tabKey;
   document.querySelectorAll('.mtab').forEach(b => {
     b.classList.remove('active');
@@ -920,7 +1049,7 @@ function switchMetricTab(tabKey, preserveLocation = false) {
     THEMATIC_MAP_LAYERS.forEach(name =>
       frame.contentWindow.postMessage({type:'toggle_layer', name:name, show:name === metricLayers[tabKey]}, '*')
     );
-    if (preserveLocation && currentNeighborhood) {
+    if (preserveLocation && currentNeighborhood && !matchedRecord) {
       frame.contentWindow.postMessage({
         type:'select_at_location',
         targetLayer:metricLayers[tabKey],
@@ -931,14 +1060,13 @@ function switchMetricTab(tabKey, preserveLocation = false) {
       }, '*');
     }
   }
-  const activeRows = tabKey === 'heat' ? heatData : ntaData;
-  document.getElementById('nta-options').innerHTML = activeRows
-    .slice().sort((a,b) => String(a.nta_name).localeCompare(String(b.nta_name)))
-    .map(d => `<option value="${esc(d.nta_name)}">${esc(d.boro_name || d.borough || '')}</option>`).join('');
   document.getElementById('nta-search').placeholder = tabKey === 'heat'
     ? `Search ${heatData.length || 197} official HVI areas`
     : `Search ${ntaData.length || 195} NYC areas`;
-  if (preserveLocation && currentNeighborhood) {
+  if (matchedRecord) {
+    if (tabKey === 'heat') openHeatNeighborhood(matchedRecord, false);
+    else openNeighborhood(matchedRecord, false);
+  } else if (preserveLocation && currentNeighborhood) {
     document.getElementById('nta-data').classList.remove('visible');
     document.getElementById('placeholder').style.display = 'flex';
     document.getElementById('ph-count').textContent = 'Matching the same map location to this dataset’s native NTA geography…';
@@ -957,6 +1085,15 @@ function switchMetricTab(tabKey, preserveLocation = false) {
 }
 
 window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'location_resolved') {
+    const pending = reportResolveRequests.get(e.data.requestId);
+    if (pending) {
+      clearTimeout(pending.timer);
+      reportResolveRequests.delete(e.data.requestId);
+      pending.resolve(e.data.props || null);
+    }
+    return;
+  }
   if (!e.data || e.data.type !== 'nta_click') return;
   if (Number.isFinite(Number(e.data.lat)) && Number.isFinite(Number(e.data.lng))) {
     currentMapLocation = { lat:Number(e.data.lat), lng:Number(e.data.lng) };
@@ -1064,6 +1201,11 @@ function injectIntoIframe() {
     const iDoc = mapFrame.contentDocument;
     const iWin = mapFrame.contentWindow;
     if (!iDoc || !iWin || !iWin.L) { setTimeout(injectIntoIframe, 400); return; }
+    const leafletMapReady = Object.values(iWin).some(value => {
+      try { return value && typeof value === 'object' && value.getZoom && value.eachLayer; }
+      catch (error) { return false; }
+    });
+    if (!leafletMapReady) { setTimeout(injectIntoIframe, 400); return; }
     if (iWin.__dbInjected) return;
     iWin.__dbInjected = true;
 
@@ -1129,6 +1271,24 @@ function injectIntoIframe() {
         if(layer.eachLayer) layer.eachLayer(function(child){walkFeatures(child,visit);});
       }
 
+      function pointInRing(lng,lat,ring){
+        var inside=false;
+        for(var i=0,j=ring.length-1;i<ring.length;j=i++){
+          var xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+          if(((yi>lat)!==(yj>lat))&&(lng<(xj-xi)*(lat-yi)/(yj-yi)+xi)) inside=!inside;
+        }
+        return inside;
+      }
+      function pointInGeometry(lng,lat,geometry){
+        if(!geometry||!geometry.coordinates) return false;
+        var polygons=geometry.type==='Polygon'?[geometry.coordinates]:geometry.coordinates;
+        if(geometry.type!=='Polygon'&&geometry.type!=='MultiPolygon') return false;
+        return polygons.some(function(rings){
+          return rings.length&&pointInRing(lng,lat,rings[0])&&
+            !rings.slice(1).some(function(hole){return pointInRing(lng,lat,hole);});
+        });
+      }
+
       /* Listen for highlight/clear messages from parent dashboard */
       window.addEventListener('message',function(msg){
         if(!msg.data) return;
@@ -1171,7 +1331,7 @@ function injectIntoIframe() {
         if(msg.data.type==='toggle_layer'){
           if(window.__toggleLayer) window.__toggleLayer(msg.data.name, msg.data.show);
         }
-        if(msg.data.type==='select_at_location'){
+        if(msg.data.type==='select_at_location'||msg.data.type==='resolve_at_location'){
           var target=window.__layerMap[msg.data.targetLayer];
           if(!target) return;
           var lat=Number(msg.data.lat),lng=Number(msg.data.lng),point=null;
@@ -1189,14 +1349,16 @@ function injectIntoIframe() {
             });
           }
           if(!point) return;
-          var selected=null,layerPoint=map.latLngToLayerPoint(point);
+          var selected=null;
           walkFeatures(target,function(sub){
             if(selected||!sub.feature||!sub.getBounds||!sub.getBounds().contains(point)) return;
-            if(typeof sub._containsPoint!=='function'||sub._containsPoint(layerPoint)) selected=sub;
+            if(pointInGeometry(point.lng,point.lat,sub.feature.geometry)) selected=sub;
           });
           if(selected){
             window.parent.postMessage({
-              type:'nta_click',props:selected.feature.properties,lat:point.lat,lng:point.lng
+              type:msg.data.type==='resolve_at_location'?'location_resolved':'nta_click',
+              requestId:msg.data.requestId,
+              props:selected.feature.properties,lat:point.lat,lng:point.lng
             },'*');
           }
         }
@@ -1237,6 +1399,19 @@ function resetDerivedViews() {
   document.getElementById('borough-content').style.display = 'none';
 }
 
+function updateDataStatus() {
+  const status = document.getElementById('data-status');
+  if (!ntaData.length || !heatData.length) {
+    status.innerHTML = '<span><strong>LOADING</strong> Validating official tree and heat snapshots…</span>';
+    return;
+  }
+  status.innerHTML = `
+    <span><strong>VALIDATED</strong> ${ntaData.length} tree NTAs · ${heatData.length} HVI NTAs</span>
+    <span>Trees: 2010 NTA geography</span>
+    <span>HVI 2023: 2020 NTA geography</span>
+    <a href="docs/methodology.md">How this works</a>`;
+}
+
 function setNeighborhoodData(rows) {
   const byCode = new Map();
   rows.forEach(function(row) {
@@ -1248,26 +1423,16 @@ function setNeighborhoodData(rows) {
     throw new Error('Neighborhood snapshot did not pass client-side completeness checks');
   }
   ntaData = validated;
+  document.documentElement.dataset.treeReady = 'true';
+  updateDataStatus();
   resetDerivedViews();
   buildBoroughStats();
   buildFindings();
-
-  document.getElementById('nta-options').innerHTML = ntaData
-    .slice()
-    .sort((a,b) => String(a.nta_name).localeCompare(String(b.nta_name)))
-    .map(d => `<option value="${esc(d.nta_name)}">${esc(d.boro_name || d.borough || '')}</option>`)
-    .join('');
 
   const sample = ntaData[0] || {};
   const treeYear = Number(sample.tree_source_year) || 2015;
   document.getElementById('ph-count').textContent = `${ntaData.length} areas ready. Click the map to explore one.`;
   document.getElementById('nav-vintage').textContent = `Trees ${treeYear} · HVI 2023`;
-  document.getElementById('data-status').innerHTML = `
-    <span><strong>VALIDATED</strong> ${ntaData.length} tree NTAs · ${heatData.length || 197} HVI NTAs</span>
-    <span>Trees: 2010 NTA geography</span>
-    <span>HVI 2023: 2020 NTA geography</span>
-    <a href="docs/methodology.md">How this works</a>`;
-
   const hashKey = decodeURIComponent((window.location.hash.match(/^#nta=(.+)$/) || [])[1] || '').toLowerCase();
   if (hashKey) {
     const linked = ntaData.find(d => String(d.nta_code || '').toLowerCase() === hashKey || String(d.nta_name || '').toLowerCase() === hashKey);
@@ -1296,6 +1461,12 @@ function setHeatData(rows) {
     throw new Error('Official HVI snapshot did not pass client-side completeness checks');
   }
   heatData = validated;
+  document.documentElement.dataset.heatReady = 'true';
+  updateDataStatus();
+  if (currentMetric === 'heat' && currentNeighborhood && currentNeighborhood.dataset_geography === 'NTA2010') {
+    const matched = matchingRecordForMetric('heat');
+    if (matched) openHeatNeighborhood(matched, false);
+  }
   const hashKey = decodeURIComponent((window.location.hash.match(/^#heat=(.+)$/) || [])[1] || '').toLowerCase();
   if (hashKey) {
     const linked = heatData.find(d => String(d.nta_code).toLowerCase() === hashKey || String(d.nta_name).toLowerCase() === hashKey);
@@ -1317,7 +1488,10 @@ async function extractNeighborhoodData() {
       const response = await fetch(url, { cache:'no-cache', credentials:'omit' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const geojson = await response.json();
-      const rows = (geojson.features || []).map(feature => feature.properties || {});
+      const rows = (geojson.features || []).map(feature => ({
+        ...(feature.properties || {}),
+        __geometry:feature.geometry,
+      }));
       setNeighborhoodData(rows);
       return;
     } catch (error) {
@@ -1340,7 +1514,10 @@ async function extractHeatData() {
       const response = await fetch(url, { cache:'no-cache', credentials:'omit' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const geojson = await response.json();
-      setHeatData((geojson.features || []).map(feature => feature.properties || {}));
+      setHeatData((geojson.features || []).map(feature => ({
+        ...(feature.properties || {}),
+        __geometry:feature.geometry,
+      })));
       return;
     } catch (error) {
       errors.push(`${url}: ${error.message}`);
@@ -1360,21 +1537,93 @@ setTimeout(injectIntoIframe, 0);
 extractNeighborhoodData();
 extractHeatData();
 
-document.getElementById('nta-search').addEventListener('change', function() {
-  const query = this.value.trim().toLowerCase();
-  const rows = currentMetric === 'heat' ? heatData : ntaData;
-  const match = rows.find(d => String(d.nta_name || '').toLowerCase() === query)
-    || rows.find(d => String(d.nta_name || '').toLowerCase().startsWith(query));
-  if (match) {
-    if (currentMetric === 'heat') openHeatNeighborhood(match, true);
-    else openNeighborhood(match, true);
-  }
-});
+const searchInput = document.getElementById('nta-search');
+const searchOptions = document.getElementById('nta-options');
+let visibleSearchRows = [];
+let activeSearchIndex = -1;
 
-document.getElementById('nta-search').addEventListener('keydown', function(event) {
-  if (event.key === 'Enter') {
+function closeSearchSuggestions() {
+  searchOptions.classList.remove('open');
+  searchOptions.replaceChildren();
+  searchInput.setAttribute('aria-expanded', 'false');
+  searchInput.removeAttribute('aria-activedescendant');
+  visibleSearchRows = [];
+  activeSearchIndex = -1;
+}
+
+function updateActiveSearchOption(index) {
+  const options = [...searchOptions.querySelectorAll('.nta-option')];
+  if (!options.length) return;
+  activeSearchIndex = (index + options.length) % options.length;
+  options.forEach((option, optionIndex) => option.classList.toggle('active', optionIndex === activeSearchIndex));
+  const active = options[activeSearchIndex];
+  searchInput.setAttribute('aria-activedescendant', active.id);
+  active.scrollIntoView({ block:'nearest' });
+}
+
+function selectSearchRow(row) {
+  if (!row) return;
+  currentMapLocation = representativeLocation(row);
+  searchInput.value = row.nta_name || '';
+  closeSearchSuggestions();
+  if (currentMetric === 'heat') openHeatNeighborhood(row, true);
+  else openNeighborhood(row, true);
+}
+
+function renderSearchSuggestions(query = searchInput.value) {
+  const normalized = String(query || '').trim().toLowerCase();
+  const rows = (currentMetric === 'heat' ? heatData : ntaData).slice();
+  visibleSearchRows = rows
+    .filter(row => !normalized || String(row.nta_name || '').toLowerCase().includes(normalized))
+    .sort((a, b) => {
+      const aName = String(a.nta_name || '').toLowerCase();
+      const bName = String(b.nta_name || '').toLowerCase();
+      const aStarts = normalized && aName.startsWith(normalized) ? 0 : 1;
+      const bStarts = normalized && bName.startsWith(normalized) ? 0 : 1;
+      return aStarts - bStarts || aName.localeCompare(bName);
+    })
+    .slice(0, 10);
+  searchOptions.replaceChildren(...visibleSearchRows.map((row, index) => {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'nta-option';
+    option.id = `nta-option-${index}`;
+    option.setAttribute('role', 'option');
+    option.innerHTML = `${esc(row.nta_name)}<small>${esc(row.boro_name || row.borough || '')} · ${esc(row.nta_code || '')}</small>`;
+    option.addEventListener('pointerdown', event => {
+      event.preventDefault();
+      selectSearchRow(row);
+    });
+    return option;
+  }));
+  searchOptions.classList.toggle('open', visibleSearchRows.length > 0);
+  searchInput.setAttribute('aria-expanded', visibleSearchRows.length > 0 ? 'true' : 'false');
+  activeSearchIndex = -1;
+  searchInput.removeAttribute('aria-activedescendant');
+}
+
+searchInput.addEventListener('focus', function() {
+  this.select();
+  renderSearchSuggestions('');
+});
+searchInput.addEventListener('click', function() {
+  this.select();
+  renderSearchSuggestions('');
+});
+searchInput.addEventListener('input', function() { renderSearchSuggestions(this.value); });
+searchInput.addEventListener('blur', function() { setTimeout(closeSearchSuggestions, 120); });
+searchInput.addEventListener('keydown', function(event) {
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault();
-    this.dispatchEvent(new Event('change'));
+    if (!visibleSearchRows.length) renderSearchSuggestions(this.value);
+    updateActiveSearchOption(activeSearchIndex + (event.key === 'ArrowDown' ? 1 : -1));
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    const exact = visibleSearchRows.find(row => String(row.nta_name || '').toLowerCase() === this.value.trim().toLowerCase());
+    selectSearchRow(exact || visibleSearchRows[Math.max(activeSearchIndex, 0)]);
+  } else if (event.key === 'Escape') {
+    closeSearchSuggestions();
+    this.select();
   }
 });
 

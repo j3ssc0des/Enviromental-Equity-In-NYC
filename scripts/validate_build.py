@@ -55,7 +55,8 @@ for required in ("data/processed/nta_environmental_snapshot.geojson",
                  "Official source geographies",
                  'id="download-report"', 'Download report',
                  'data-tab="heat"', 'NTA2020', 'Heat Vulnerability Index (2023)',
-                 "select_at_location", "sourceGeography"):
+                 "select_at_location", "sourceGeography", "resolveReportRecord",
+                 "COMBINED LOCATION REPORT", 'role="combobox"', "renderSearchSuggestions"):
     if required not in html: errors.append(f"required UI safeguard is missing: {required}")
 pipeline=(ROOT/"nyc_trees_analysis.py").read_text()
 for forbidden in ("Heat Risk:", "Urban Heat Vulnerability", "Underserved Index"):
